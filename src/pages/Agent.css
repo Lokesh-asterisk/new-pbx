@@ -1,0 +1,329 @@
+.agent-loading {
+  color: #94a3b8;
+  margin: 1rem 0;
+}
+
+.agent-dashboard {
+  max-width: 1100px;
+  margin: 0 auto;
+  height: calc(100vh - 80px);
+}
+
+.agent-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 280px;
+  gap: 1.5rem;
+  height: 100%;
+}
+
+@media (max-width: 900px) {
+  .agent-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.agent-status-panel,
+.agent-dial-panel,
+.agent-contacts-panel {
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 12px;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.agent-status-panel h3,
+.agent-dial-panel h3,
+.agent-contacts-panel h3 {
+  margin: 0 0 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.recent-title {
+  margin-top: 1rem !important;
+}
+
+/* Status */
+.status-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.status-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.8125rem;
+  color: #94a3b8;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.status-btn:hover {
+  color: #e2e8f0;
+  border-color: #475569;
+}
+
+.status-btn.active {
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.active-call-card {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 8px;
+}
+
+.call-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 0.75rem;
+}
+
+.call-direction {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  text-transform: uppercase;
+}
+
+.call-number {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #f1f5f9;
+}
+
+.call-duration {
+  font-size: 0.875rem;
+  color: #64748b;
+  font-variant-numeric: tabular-nums;
+}
+
+.btn-hangup {
+  width: 100%;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  color: #fff;
+  background: #dc2626;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-hangup:hover {
+  background: #b91c1c;
+}
+
+.incoming-placeholder {
+  margin-top: 1rem;
+  padding: 1rem;
+  text-align: center;
+  color: #64748b;
+  font-size: 0.875rem;
+}
+
+.btn-answer-demo {
+  margin-top: 0.5rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.8125rem;
+  color: #22c55e;
+  background: rgba(34, 197, 94, 0.15);
+  border: 1px solid #22c55e;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-answer-demo:hover {
+  background: rgba(34, 197, 94, 0.25);
+}
+
+/* Dial pad */
+.dial-display {
+  padding: 0.75rem 1rem;
+  font-size: 1.25rem;
+  font-variant-numeric: tabular-nums;
+  color: #f1f5f9;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  min-height: 48px;
+}
+
+.dialpad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.dial-key {
+  padding: 0.875rem;
+  font-size: 1.25rem;
+  font-weight: 500;
+  color: #e2e8f0;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.dial-key:hover {
+  background: #334155;
+  border-color: #475569;
+}
+
+.dial-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: auto;
+}
+
+.btn-backspace {
+  padding: 0.625rem 1rem;
+  font-size: 1rem;
+  color: #94a3b8;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-backspace:hover {
+  color: #f1f5f9;
+  border-color: #475569;
+}
+
+.btn-call {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: #fff;
+  background: #22c55e;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-call:hover:not(:disabled) {
+  background: #16a34a;
+}
+
+.btn-call:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Contacts */
+.contact-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.contact-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid #334155;
+  gap: 0.75rem;
+}
+
+.contact-item:last-child {
+  border-bottom: none;
+}
+
+.contact-name {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: #f1f5f9;
+}
+
+.contact-number {
+  font-size: 0.8125rem;
+  color: #64748b;
+  font-variant-numeric: tabular-nums;
+}
+
+.btn-call-contact {
+  padding: 0.375rem 0.75rem;
+  font-size: 0.8125rem;
+  color: #22c55e;
+  background: rgba(34, 197, 94, 0.15);
+  border: 1px solid #22c55e;
+  border-radius: 6px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+
+.btn-call-contact:hover {
+  background: rgba(34, 197, 94, 0.25);
+}
+
+.recent-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: 0.8125rem;
+}
+
+.recent-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+  color: #94a3b8;
+}
+
+.recent-dir {
+  text-transform: capitalize;
+  min-width: 4rem;
+}
+
+.recent-dir.outbound {
+  color: #3b82f6;
+}
+
+.recent-dir.inbound {
+  color: #22c55e;
+}
+
+.recent-num {
+  font-variant-numeric: tabular-nums;
+  color: #cbd5e1;
+}
+
+.recent-empty {
+  padding: 0.5rem 0;
+  color: #64748b;
+}

@@ -1,0 +1,119 @@
+.superadmin-error {
+  color: #f87171;
+  margin: 0 0 1rem;
+  font-size: 0.875rem;
+}
+
+.superadmin-loading {
+  color: #94a3b8;
+  margin: 1rem 0;
+}
+
+.superadmin-add-btn {
+  margin-bottom: 1rem;
+}
+
+.superadmin-form {
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 10px;
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+  max-width: 420px;
+}
+
+.superadmin-form h3 {
+  margin: 0 0 1rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #f1f5f9;
+}
+
+.superadmin-form label {
+  display: block;
+  margin-bottom: 0.75rem;
+  font-size: 0.875rem;
+  color: #94a3b8;
+}
+
+.superadmin-form label input,
+.superadmin-form label select {
+  display: block;
+  width: 100%;
+  margin-top: 0.25rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  color: #e2e8f0;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  box-sizing: border-box;
+}
+
+.superadmin-form label input::placeholder {
+  color: #64748b;
+}
+
+.superadmin-parent-label input {
+  max-width: 120px;
+}
+
+.superadmin-form-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.superadmin-table-wrap {
+  overflow-x: auto;
+  border: 1px solid #334155;
+  border-radius: 10px;
+  background: #1e293b;
+}
+
+.superadmin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.superadmin-table th,
+.superadmin-table td {
+  padding: 0.625rem 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid #334155;
+}
+
+.superadmin-table th {
+  background: #0f172a;
+  color: #94a3b8;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.superadmin-table td {
+  color: #e2e8f0;
+}
+
+.superadmin-table tbody tr:hover {
+  background: #334155;
+}
+
+.superadmin-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.superadmin-table td .action-btn + .action-btn {
+  margin-left: 0.5rem;
+}
+
+.superadmin-delete-btn {
+  background: #7f1d1d;
+  color: #fecaca;
+}
+
+.superadmin-delete-btn:hover {
+  background: #991b1b;
+  color: #fff;
+}

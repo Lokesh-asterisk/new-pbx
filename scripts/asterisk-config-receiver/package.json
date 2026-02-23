@@ -1,0 +1,7 @@
+{
+  "name": "asterisk-config-receiver",
+  "version": "1.0.0",
+  "description": "HTTP server on Asterisk VM: receives config from PBX app and writes agents.conf / pjsip_custom.conf, then reloads.",
+  "type": "module",
+  "main": "server.js"
+}
