@@ -762,6 +762,31 @@
 .la-status-unknown .la-status-dot { background: #94a3b8; }
 
 @media (max-width: 768px) {
+  .superadmin-sidebar {
+    position: fixed;
+    left: -250px;
+    top: 0;
+    bottom: 0;
+    z-index: 100;
+    transition: left 0.25s ease;
+    box-shadow: 2px 0 8px rgba(0,0,0,0.3);
+  }
+  .superadmin-sidebar.open {
+    left: 0;
+  }
+  .superadmin-main {
+    margin-left: 0 !important;
+  }
+  .sidebar-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 99;
+  }
+  .sidebar-overlay.open {
+    display: block;
+  }
   .la-stats-grid {
     grid-template-columns: repeat(3, 1fr);
   }

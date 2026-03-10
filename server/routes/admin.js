@@ -11,6 +11,11 @@ import { originateIntoStasis, originateToContext, getQueueStasisAppName, isAriCo
 import { getBridgedCallInfo, forceLogoutAgent } from '../ari-stasis-queue.js';
 import { destroySessionsForUser } from '../session-utils.js';
 import { endAgentSession } from '../agent-sessions.js';
+import { normalizePhoneForBlacklist } from '../utils/phone.js';
+import { csvEscape } from '../utils/csv.js';
+import { performForceEndBreak, performForceLogout } from '../utils/agent-actions.js';
+import { ensureAgentInTenant } from '../utils/tenant.js';
+import { sanitizeAgentId } from '../utils/validation.js';
 
 const router = express.Router();
 
@@ -44,11 +49,6 @@ router.get('/tenants', async (req, res) => {
 });
 
 // --- Blacklist (block prank/robocall numbers per tenant) ---
-
-function normalizePhoneForBlacklist(raw) {
-  if (raw == null || typeof raw !== 'string') return '';
-  return raw.replace(/\D/g, '');
-}
 
 router.get('/blacklist', async (req, res) => {
   try {
@@ -442,32 +442,20 @@ router.post('/live-agents/:agentId/monitor', async (req, res) => {
 });
 
 async function ensureAgentInAdminTenant(req, agentId) {
-  const user = req.session?.user;
-  if (user?.role === 'superadmin' || user?.role === 1) return true;
-  const agentRow = await queryOne(
-    'SELECT parent_id FROM users WHERE phone_login_number = ? AND role = 5 LIMIT 1',
-    [agentId]
-  );
-  const agentTenantId = agentRow?.parent_id ?? null;
-  const adminTenantId = user?.parent_id ?? user?.tenant_id ?? null;
-  return agentTenantId != null && adminTenantId != null && Number(agentTenantId) === Number(adminTenantId);
+  return ensureAgentInTenant(req.session?.user, agentId);
 }
 
 // POST /live-agents/:agentId/force-end-break - Set agent to Available
 router.post('/live-agents/:agentId/force-end-break', async (req, res) => {
   try {
-    const agentId = (req.params.agentId || '').toString().trim().replace(/\D/g, '') || null;
+    const agentId = sanitizeAgentId(req.params.agentId);
     if (!agentId) return res.status(400).json({ success: false, error: 'Agent ID required' });
     if (!(await ensureAgentInAdminTenant(req, agentId))) {
       return res.status(403).json({ success: false, error: 'Agent not in your tenant' });
     }
-    const row = await queryOne('SELECT 1 FROM users WHERE phone_login_number = ? AND role = 5 LIMIT 1', [agentId]);
-    if (!row) return res.status(404).json({ success: false, error: 'Agent not found' });
-    await query(
-      `UPDATE agent_status SET status = 'LOGGEDIN', break_name = NULL, break_started_at = NULL, timestamp = NOW() WHERE agent_id = ?`,
-      [agentId]
-    );
-    return res.json({ success: true, message: 'Agent set to Available' });
+    const result = await performForceEndBreak(agentId);
+    if (!result.success) return res.status(result.status || 400).json({ success: false, error: result.error });
+    return res.json({ success: true, message: result.message });
   } catch (err) {
     console.error('Admin force-end-break error:', err);
     return res.status(500).json({ success: false, error: err.message || 'Failed to end break' });
@@ -477,35 +465,15 @@ router.post('/live-agents/:agentId/force-end-break', async (req, res) => {
 // POST /live-agents/:agentId/force-logout - Hang up channels, set LoggedOut, clear extension
 router.post('/live-agents/:agentId/force-logout', async (req, res) => {
   try {
-    const agentId = (req.params.agentId || '').toString().trim().replace(/\D/g, '') || null;
+    const agentId = sanitizeAgentId(req.params.agentId);
     if (!agentId) return res.status(400).json({ success: false, error: 'Agent ID required' });
     if (!(await ensureAgentInAdminTenant(req, agentId))) {
       return res.status(403).json({ success: false, error: 'Agent not in your tenant' });
     }
-    const userRow = await queryOne('SELECT id FROM users WHERE phone_login_number = ? AND role = 5 LIMIT 1', [agentId]);
-    if (!userRow) return res.status(404).json({ success: false, error: 'Agent not found' });
-    const userId = userRow.id;
-    const result = await forceLogoutAgent(agentId);
-    if (!result.success) {
-      return res.status(400).json({ success: false, error: result.error || 'Force logout failed' });
-    }
-    await endAgentSession(agentId, 'forced');
-    await query(
-      `UPDATE agent_status SET status = 'LoggedOut', agent_channel_id = NULL, customer_channel_id = NULL,
-       customer_number = NULL, call_id = NULL, queue_name = NULL, session_started_at = NULL,
-       break_name = NULL, break_started_at = NULL, timestamp = NOW() WHERE agent_id = ?`,
-      [agentId]
-    );
-    await query('UPDATE users SET soft_phone_login_status = 0 WHERE phone_login_number = ? LIMIT 1', [agentId]).catch(() => {});
-    await query('DELETE FROM agent_extension_usage WHERE user_id = ?', [userId]).catch(() => {});
-
     const store = req.app.get('sessionStore');
-    if (store) {
-      destroySessionsForUser(store, userId, (err) => {
-        if (err) console.error('Admin force-logout destroy sessions:', err);
-      });
-    }
-    return res.json({ success: true, message: 'Agent logged out; channels and session cleared. Agent will be redirected to login.' });
+    const result = await performForceLogout(agentId, store);
+    if (!result.success) return res.status(result.status || 400).json({ success: false, error: result.error });
+    return res.json({ success: true, message: result.message });
   } catch (err) {
     console.error('Admin force-logout error:', err);
     return res.status(500).json({ success: false, error: err.message || 'Force logout failed' });
@@ -513,13 +481,6 @@ router.post('/live-agents/:agentId/force-logout', async (req, res) => {
 });
 
 // --- CDR (Call Detail Records) ---
-
-function csvEscape(s) {
-  if (s == null) return '';
-  const str = String(s);
-  if (/[,"\r\n]/.test(str)) return `"${str.replace(/"/g, '""')}"`;
-  return str;
-}
 
 router.get('/cdr', async (req, res) => {
   try {

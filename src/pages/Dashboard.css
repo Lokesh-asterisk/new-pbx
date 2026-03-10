@@ -120,3 +120,21 @@
 .dashboard-table tbody tr:hover {
   background: #1e293b;
 }
+
+/* Color-coded metric values */
+.metric-good { color: #22c55e; }
+.metric-warning { color: #f59e0b; }
+.metric-danger { color: #ef4444; }
+
+/* Sortable table headers */
+.sortable-th {
+  cursor: pointer;
+  user-select: none;
+}
+.sortable-th:hover {
+  color: #3b82f6;
+}
+.sort-indicator {
+  margin-left: 4px;
+  font-size: 0.75rem;
+}

@@ -80,8 +80,8 @@ async function ariRequest(path, options = {}) {
     const text = await res.text();
     return { status: res.status, body: text };
   } catch (err) {
-    console.error('ARI request error:', err.message);
-    return { status: 0, body: err.message || 'Network error' };
+    console.error('[ARI]', options.method || 'GET', path, '- error:', err?.message || err);
+    return { status: 0, body: err?.message || 'ARI request failed' };
   }
 }
 

@@ -2,6 +2,8 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import session from 'express-session';
+import rateLimit from 'express-rate-limit';
+import { asteriskAuthMiddleware } from './utils/asterisk-auth.js';
 import authRoutes from './routes/auth.js';
 import agentRoutes from './routes/agent.js';
 import superadminRoutes from './routes/superadmin.js';
@@ -30,7 +32,7 @@ app.use(cors({
   },
   credentials: true,
 }));
-app.use(express.json());
+app.use(express.json({ limit: '1mb' }));
 app.use(
   session({
     name: 'pbx.sid',
@@ -41,16 +43,24 @@ app.use(
     cookie: {
       secure: process.env.NODE_ENV === 'production',
       httpOnly: true,
+      sameSite: 'lax',
       maxAge: 24 * 60 * 60 * 1000,
     },
   })
 );
 app.set('sessionStore', sessionStore);
 
+const loginRateLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 5,
+  message: { success: false, error: 'Too many login attempts. Try again later.' },
+});
+app.use('/api/auth/login', loginRateLimiter);
+
 app.use('/api/auth', authRoutes);
 app.use('/api/agent', agentRoutes);
 app.use('/api/superadmin', superadminRoutes);
-app.use('/api/asterisk', asteriskRoutes);
+app.use('/api/asterisk', asteriskAuthMiddleware, asteriskRoutes);
 app.use('/api/wallboard', wallboardRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/reports', reportRoutes);
@@ -60,8 +70,13 @@ app.get('/api/health', (req, res) => {
 });
 
 app.listen(PORT, async () => {
+  const sessionSecret = process.env.SESSION_SECRET || '';
+  const defaultSecret = 'pbx-callcentre-secret-change-in-production';
+  if (!sessionSecret || sessionSecret === defaultSecret) {
+    console.warn('[startup] SESSION_SECRET is not set or using default value. Set a secure SESSION_SECRET in production.');
+  }
   console.log(`PBX API running at http://localhost:${PORT}`);
   startQueueStasisClient();
-  await initRedis().catch(() => {});
+  await initRedis().catch(e => console.warn('[startup] Redis unavailable:', e?.message));
   startReportAggregator();
 });

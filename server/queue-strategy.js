@@ -52,9 +52,9 @@ export async function getOrderedQueueMembers(queueIdOrName) {
   const raw = (queueIdOrName || '').toString().trim();
   if (!raw) return { members: [], strategy: 'ringall', queueName: null };
 
-  let queue = await queryOne('SELECT id, name, strategy FROM queues WHERE name = ? LIMIT 1', [raw]);
+  let queue = await queryOne('SELECT id, name, strategy, tenant_id FROM queues WHERE name = ? LIMIT 1', [raw]);
   if (!queue && /^\d+$/.test(raw)) {
-    queue = await queryOne('SELECT id, name, strategy FROM queues WHERE id = ? LIMIT 1', [parseInt(raw, 10)]);
+    queue = await queryOne('SELECT id, name, strategy, tenant_id FROM queues WHERE id = ? LIMIT 1', [parseInt(raw, 10)]);
   }
   if (!queue) return { members: [], strategy: 'ringall', queueName: null };
 
@@ -71,9 +71,13 @@ export async function getOrderedQueueMembers(queueIdOrName) {
   const rawMembers = [...members];
 
   // Single query to get all agent_status rows — classify each as available, busy, or offline
-  const allStatusRows = await query(
-    'SELECT agent_id, extension_number, status FROM agent_status'
-  );
+  const statusParams = [];
+  let statusSql = 'SELECT agent_id, extension_number, status FROM agent_status';
+  if (queue.tenant_id) {
+    statusSql += ' WHERE tenant_id = ?';
+    statusParams.push(queue.tenant_id);
+  }
+  const allStatusRows = await query(statusSql, statusParams);
   const availableIds = new Set();
   const busyIds = new Set();
   for (const r of allStatusRows || []) {
@@ -105,11 +109,10 @@ export async function getOrderedQueueMembers(queueIdOrName) {
   }
   members = members.filter((m) => availableIds.has(m) && !busyIds.has(m));
 
-  console.log('[queue-strategy]', queueName, '| strategy:', strategy,
-    '| rawMembers:', rawMembers,
-    '| available:', [...availableIds],
-    '| busy:', [...busyIds],
-    '| finalMembers:', members);
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('[queue-strategy]', queueName, '| strategy:', strategy,
+      '| raw:', rawMembers.length, '| available:', members.length);
+  }
 
   if (members.length === 0) return { members: [], strategy, queueName };
 

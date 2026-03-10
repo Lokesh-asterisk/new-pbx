@@ -37,7 +37,7 @@ export default function Login() {
           </div>
         </div>
         <form onSubmit={handleSubmit} className="login-form">
-          {error && <div className="login-error">{error}</div>}
+          {error && <div className="login-error" role="alert" aria-live="polite">{error}</div>}
           <div className="form-group">
             <label htmlFor="username">Username</label>
             <input
@@ -63,7 +63,9 @@ export default function Login() {
             />
           </div>
           <p className="login-hint">Sign in with a user created in Super Admin. Agents need extension and PIN set in Edit phone / PIN.</p>
-          <p className="login-hint login-hint-muted">After seed: superadmin, admin, user, agent, agent2 — password: demo123. Run API with <code>npm run server</code> (port 3001).</p>
+          {import.meta.env.DEV && (
+            <p className="login-hint login-hint-muted">After seed: superadmin, admin, user, agent, agent2 — password: demo123. Run API with <code>npm run server</code> (port 3001).</p>
+          )}
           <button type="submit" className="btn-login">Sign in</button>
         </form>
       </div>

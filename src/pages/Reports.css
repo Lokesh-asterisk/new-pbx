@@ -465,3 +465,43 @@
   .rpt-kpi-strip { grid-template-columns: repeat(3, 1fr); }
   .reports-header { flex-direction: column; align-items: flex-start; }
 }
+
+/* Date preset buttons */
+.rpt-date-presets {
+  display: flex;
+  gap: 0.25rem;
+  margin-bottom: 0.5rem;
+}
+.rpt-date-preset {
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  border: 1px solid #475569;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.rpt-date-preset:hover,
+.rpt-date-preset.active {
+  background: #3b82f6;
+  color: #fff;
+  border-color: #3b82f6;
+}
+
+/* Chart accessible table alternative */
+.chart-data-table {
+  width: 100%;
+  font-size: 0.8rem;
+  border-collapse: collapse;
+}
+.chart-data-table th,
+.chart-data-table td {
+  padding: 0.25rem 0.5rem;
+  text-align: left;
+  border-bottom: 1px solid #334155;
+}
+.chart-data-table th {
+  color: #94a3b8;
+  font-weight: 600;
+}

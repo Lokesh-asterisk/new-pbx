@@ -325,7 +325,7 @@ export async function syncDialplanToAsterisk() {
     L('[inbound]');
     L('exten => _X.,1,NoOp(Inbound route lookup DID=${EXTEN})');
     L(' same => n,Set(CallStartTime=${EPOCH})');
-    L(` same => n,Set(RouteInfo=\${SHELL(curl -s "\${INBOUND_ROUTE}DID=\${EXTEN}&CallerNumber=\${CALLERID(num)}&CallUniqueID=\${UNIQUEID}")})`);
+    L(` same => n,Set(RouteInfo=\${SHELL(curl -s --connect-timeout 3 --max-time 5 "\${INBOUND_ROUTE}DID=\${EXTEN}&CallerNumber=\${CALLERID(num)}&CallUniqueID=\${UNIQUEID}")})`);
     L(' same => n,Set(ARRAY(CallStatus,Destination_Action,Destination_Value,UserID,CDRID,CampaignName)=${RouteInfo})');
     L(' same => n,GotoIf($["${CallStatus}"="OK"]?route)');
     L(' same => n,Hangup()');
@@ -383,7 +383,7 @@ export async function syncDialplanToAsterisk() {
     L('[IVR]');
     L('exten => s,1,NoOp(IVR: ${Destination_Value})');
     L(' same => n,Set(IVRID=${Destination_Value})');
-    L(` same => n,Set(IVRInfo=\${SHELL(curl -s "\${IVR_DETAIL}IVRID=\${IVRID}")})`);
+    L(` same => n,Set(IVRInfo=\${SHELL(curl -s --connect-timeout 3 --max-time 5 "\${IVR_DETAIL}IVRID=\${IVRID}")})`);
     L(' same => n,Set(ARRAY(IVRStatus,IVRType,IVRGreeting,IVRValidKeys,IVRTimeout,IVRNoinputRetries,IVRInvalidRetries,IVRDefaultDestType,IVRDefaultDestValue,IVRNoinputDestType,IVRNoinputDestValue,IVRInvalidDestType,IVRInvalidDestValue)=${IVRInfo})');
     L(' same => n,GotoIf($["${IVRStatus}"!="OK"]?hangup)');
     L(' same => n,GotoIf($["${IVRType}"="normal"]?normal)');
@@ -403,7 +403,7 @@ export async function syncDialplanToAsterisk() {
     L(' same => n,Playback(${IVRGreeting})');
     L(' same => n(read),Read(IVR_KEY,,1,,,${IVRTimeout})');
     L(' same => n,GotoIf($["${IVR_KEY}"=""]?noinput)');
-    L(` same => n,Set(IVROptionInfo=\${SHELL(curl -s "\${IVR_OPTION_ROUTE}IVRID=\${IVRID}&Key=\${IVR_KEY}")})`);
+    L(` same => n,Set(IVROptionInfo=\${SHELL(curl -s --connect-timeout 3 --max-time 5 "\${IVR_OPTION_ROUTE}IVRID=\${IVRID}&Key=\${IVR_KEY}")})`);
     L(' same => n,Set(ARRAY(OptStatus,Destination_Action,Destination_Value)=${IVROptionInfo})');
     L(' same => n,GotoIf($["${OptStatus}"="OK"]?WhereToGO,${Destination_Action},1)');
     L(' same => n,Playback(pbx-invalid)');
@@ -437,7 +437,7 @@ export async function syncDialplanToAsterisk() {
     // ---- [TimeCondition] ----
     L('[TimeCondition]');
     L('exten => s,1,NoOp(TimeCondition: ${Destination_Value})');
-    L(` same => n,Set(TCInfo=\${SHELL(curl -s "\${TIME_CONDITION}TCID=\${Destination_Value}")})`);
+    L(` same => n,Set(TCInfo=\${SHELL(curl -s --connect-timeout 3 --max-time 5 "\${TIME_CONDITION}TCID=\${Destination_Value}")})`);
     L(' same => n,Set(ARRAY(TCStatus,Destination_Action,Destination_Value)=${TCInfo})');
     L(' same => n,GotoIf($["${TCStatus}"="OK"]?WhereToGO,${Destination_Action},1)');
     L(' same => n,Hangup()');
@@ -453,7 +453,7 @@ export async function syncDialplanToAsterisk() {
     L(' same => n,Set(PJSIP_HEADER(add,Call-Info)=<sip:>\\;answer-after=0)');
     L(` same => n,Dial(PJSIP/\${Destination_Value},30,b(notify-incoming^s^1(\${CHANNEL(name)}^\${UNIQUEID}^\${CALLERID(num)}^\${Destination_Value}^direct^\${CampaignName}))B(notify-answered^s^1(\${UNIQUEID}^\${Destination_Value})))`);
     L(' same => n,GotoIf($["${DIALSTATUS}"="ANSWER"]?callstatus,s,1)');
-    L(` same => n,Set(ExtFailover=\${SHELL(curl -s "\${EXTENSION_FAILOVER}ExtensionName=\${Destination_Value}")})`);
+    L(` same => n,Set(ExtFailover=\${SHELL(curl -s --connect-timeout 3 --max-time 5 "\${EXTENSION_FAILOVER}ExtensionName=\${Destination_Value}")})`);
     L(' same => n,Set(ARRAY(ExtStatus,Destination_Action,Destination_Value)=${ExtFailover})');
     L(' same => n,GotoIf($["${ExtStatus}"="OK"]?WhereToGO,${Destination_Action},1)');
     L(' same => n,Hangup()');
@@ -462,7 +462,7 @@ export async function syncDialplanToAsterisk() {
     // ---- [VoiceMail] ----
     L('[VoiceMail]');
     L('exten => s,1,NoOp(Voicemail: ${Destination_Value})');
-    L(` same => n,Set(VMInfo=\${SHELL(curl -s "\${VOICEMAIL_DETAIL}VMID=\${Destination_Value}")})`);
+    L(` same => n,Set(VMInfo=\${SHELL(curl -s --connect-timeout 3 --max-time 5 "\${VOICEMAIL_DETAIL}VMID=\${Destination_Value}")})`);
     L(' same => n,Set(ARRAY(VMStatus,VMMailbox,VMGreeting,VMMaxDuration)=${VMInfo})');
     L(' same => n,GotoIf($["${VMStatus}"!="OK"]?hangup)');
     L(' same => n,GotoIf($["${VMGreeting}"=""]?record)');
@@ -476,7 +476,7 @@ export async function syncDialplanToAsterisk() {
     // ---- [Announcement] ----
     L('[Announcement]');
     L('exten => s,1,NoOp(Announcement: ${Destination_Value})');
-    L(` same => n,Set(AnnFile=\${SHELL(curl -s "\${SOUND_FILE_PATH}SoundID=\${Destination_Value}")})`);
+    L(` same => n,Set(AnnFile=\${SHELL(curl -s --connect-timeout 3 --max-time 5 "\${SOUND_FILE_PATH}SoundID=\${Destination_Value}")})`);
     L(' same => n,GotoIf($["${AnnFile}"=""]?done)');
     L(' same => n,Playback(${AnnFile})');
     L(' same => n(done),Hangup()');
@@ -487,11 +487,11 @@ export async function syncDialplanToAsterisk() {
     L('exten => s,1,NoOp(Agent ${AgentNumber} Request For Login)');
     L(' same => n,Answer()');
     L(' same => n,Set(AgentStatus=LoginInitiated)');
-    L(` same => n,Set(AgentInformation=\${SHELL(curl -s "\${AGENT_LOGIN}AgentID=\${AgentNumber}&AgentStatus=\${AgentStatus}")})`);
+    L(` same => n,Set(AgentInformation=\${SHELL(curl -s --connect-timeout 3 --max-time 5 "\${AGENT_LOGIN}AgentID=\${AgentNumber}&AgentStatus=\${AgentStatus}")})`);
     L(' same => n,Set(ARRAY(CallStatus,CallCause)=${AgentInformation})');
     L(' same => n,Authenticate(${AgentPassword})');
     L(' same => n,Set(AgentStatus=LoginCompleted)');
-    L(` same => n,Set(LoginResult=\${SHELL(curl -s "\${AGENT_LOGIN_SUCCESS}AgentID=\${AgentNumber}&AgentStatus=\${AgentStatus}")})`);
+    L(` same => n,Set(LoginResult=\${SHELL(curl -s --connect-timeout 3 --max-time 5 "\${AGENT_LOGIN_SUCCESS}AgentID=\${AgentNumber}&AgentStatus=\${AgentStatus}")})`);
     L(` same => n,Stasis(\${STASIS_APP},login,\${AgentNumber})`);
     L(' same => n,NoOp(Agent exited Stasis)');
     L(' same => n,Hangup()');
@@ -501,8 +501,8 @@ export async function syncDialplanToAsterisk() {
     L('[callstatus]');
     L('exten => s,1,NoOp(Call status handler)');
     L(' same => n,Set(CallEndTime=${EPOCH})');
-    L(` same => n,Set(HangupResult=\${SHELL(curl -s "\${CALL_HANGUP}AgentID=\${AgentNumber}&UniqueID=\${CDRID}&Status=completed")})`);
-    L(` same => n,ExecIf($["\${RecName}"!=""]?Set(RecResult=\${SHELL(curl -s "\${RECORDING}UniqueID=\${CDRID}&Path=\${RecName}")}))`);
+    L(` same => n,Set(HangupResult=\${SHELL(curl -s --connect-timeout 3 --max-time 5 "\${CALL_HANGUP}AgentID=\${AgentNumber}&UniqueID=\${CDRID}&Status=completed")})`);
+    L(` same => n,ExecIf($["\${RecName}"!=""]?Set(RecResult=\${SHELL(curl -s --connect-timeout 3 --max-time 5 "\${RECORDING}UniqueID=\${CDRID}&Path=\${RecName}")}))`);
     L(' same => n,Return()');
     L('');
 
@@ -546,29 +546,29 @@ export async function syncDialplanToAsterisk() {
     // ---- [notify-incoming] ----
     L('[notify-incoming]');
     L('exten => s,1,NoOp(Notify incoming: channel=${ARG1} uid=${ARG2} caller=${ARG3} agent=${ARG4} queue=${ARG5} campaign=${ARG6})');
-    L(` same => n,Set(NotifyResult=\${SHELL(curl -s "\${CALL_INCOMING}AgentID=\${ARG4}&UniqueID=\${ARG2}&CustomerNumber=\${ARG3}&QueueName=\${ARG5}&ChannelID=\${ARG1}&CampaignName=\${ARG6}")})`);
+    L(` same => n,Set(NotifyResult=\${SHELL(curl -s --connect-timeout 3 --max-time 5 "\${CALL_INCOMING}AgentID=\${ARG4}&UniqueID=\${ARG2}&CustomerNumber=\${ARG3}&QueueName=\${ARG5}&ChannelID=\${ARG1}&CampaignName=\${ARG6}")})`);
     L(' same => n,Return()');
     L('');
 
     // ---- [notify-answered] ----
     L('[notify-answered]');
     L('exten => s,1,NoOp(Notify answered: uid=${ARG1} agent=${ARG2})');
-    L(` same => n,Set(AnswerResult=\${SHELL(curl -s "\${CALL_ANSWERED}AgentID=\${ARG2}&UniqueID=\${ARG1}")})`);
+    L(` same => n,Set(AnswerResult=\${SHELL(curl -s --connect-timeout 3 --max-time 5 "\${CALL_ANSWERED}AgentID=\${ARG2}&UniqueID=\${ARG1}")})`);
     L(' same => n,Return()');
     L('');
 
     // ---- [notify-hangup] ----
     L('[notify-hangup]');
     L('exten => s,1,NoOp(Notify hangup: uid=${ARG1} agent=${ARG2})');
-    L(` same => n,Set(HangupNotify=\${SHELL(curl -s "\${CALL_HANGUP}AgentID=\${ARG2}&UniqueID=\${ARG1}&Status=completed")})`);
+    L(` same => n,Set(HangupNotify=\${SHELL(curl -s --connect-timeout 3 --max-time 5 "\${CALL_HANGUP}AgentID=\${ARG2}&UniqueID=\${ARG1}&Status=completed")})`);
     L(' same => n,Return()');
     L('');
 
     // ---- [hangup-customer] ----
     L('[hangup-customer]');
     L('exten => s,1,NoOp(Customer hangup handler)');
-    L(` same => n,Set(HangupResult=\${SHELL(curl -s "\${CALL_HANGUP}UniqueID=\${UNIQUEID}&Status=completed")})`);
-    L(` same => n,ExecIf($["\${RecName}"!=""]?Set(RecResult=\${SHELL(curl -s "\${RECORDING}UniqueID=\${UNIQUEID}&Path=\${RecName}")}))`);
+    L(` same => n,Set(HangupResult=\${SHELL(curl -s --connect-timeout 3 --max-time 5 "\${CALL_HANGUP}UniqueID=\${UNIQUEID}&Status=completed")})`);
+    L(` same => n,ExecIf($["\${RecName}"!=""]?Set(RecResult=\${SHELL(curl -s --connect-timeout 3 --max-time 5 "\${RECORDING}UniqueID=\${UNIQUEID}&Path=\${RecName}")}))`);
     L(' same => n,Return()');
     L('');
 
@@ -577,7 +577,7 @@ export async function syncDialplanToAsterisk() {
     L('exten => _X.,1,NoOp(Blind transfer to ${EXTEN})');
     L(' same => n,Set(TransferStatus=1)');
     L(' same => n,Set(TransferAgent=${EXTEN})');
-    L(` same => n,Set(TransferNotify=\${SHELL(curl -s "\${CALL_HANGUP}AgentID=\${AgentNumber}&UniqueID=\${CDRID}&Status=transferred")})`);
+    L(` same => n,Set(TransferNotify=\${SHELL(curl -s --connect-timeout 3 --max-time 5 "\${CALL_HANGUP}AgentID=\${AgentNumber}&UniqueID=\${CDRID}&Status=transferred")})`);
     L(' same => n,Dial(PJSIP/${EXTEN},30)');
     L(' same => n,Hangup()');
     L('');

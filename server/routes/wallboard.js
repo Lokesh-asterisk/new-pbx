@@ -6,11 +6,13 @@
 
 import express from 'express';
 import { query, queryOne } from '../db.js';
-import { getQueueWaitingCounts, getBridgedCallInfo, forceLogoutAgent } from '../ari-stasis-queue.js';
+import { getQueueWaitingCounts, getBridgedCallInfo } from '../ari-stasis-queue.js';
 import { originateIntoStasis, originateToContext, getQueueStasisAppName, isAriConfigured } from '../asterisk-ari.js';
 import { subscribeWallboard } from '../realtime.js';
-import { destroySessionsForUser } from '../session-utils.js';
-import { endAgentSession, logAgentStatusChange } from '../agent-sessions.js';
+import { performForceEndBreak, performForceLogout } from '../utils/agent-actions.js';
+import { resolveRequestTenantId, ensureAgentInTenant, isSuperadminRole, isAdminRole } from '../utils/tenant.js';
+import { buildCsvResponse } from '../utils/csv.js';
+import { sanitizeAgentId } from '../utils/validation.js';
 
 const router = express.Router();
 
@@ -39,38 +41,8 @@ router.use(requireWallboardAccess);
  * - admin without assigned tenant: may pass query tenant_id.
  * - user (supervisor): parent_id (their team/tenant)
  */
-function isSuperadmin(u) { return u.role === 'superadmin' || u.role === 1; }
-function isAdmin(u) { return u.role === 'admin' || u.role === 2; }
-
 async function getTenantId(req) {
-  const u = req.wallboardUser;
-  const assignedTenant = u.parent_id != null || u.tenant_id != null
-    ? (parseInt(u.parent_id ?? u.tenant_id, 10) || null)
-    : null;
-
-  if (isSuperadmin(u)) {
-    const q = req.query.tenant_id;
-    if (q != null && q !== '') {
-      const n = parseInt(q, 10);
-      if (!Number.isNaN(n) && n >= 1) return n;
-    }
-    const first = await queryOne('SELECT id FROM tenants ORDER BY id LIMIT 1');
-    return first ? first.id : null;
-  }
-  if (assignedTenant != null) {
-    return assignedTenant;
-  }
-  if (isAdmin(u)) {
-    const q = req.query.tenant_id;
-    if (q != null && q !== '') {
-      const n = parseInt(q, 10);
-      if (!Number.isNaN(n) && n >= 1) return n;
-    }
-    const first = await queryOne('SELECT id FROM tenants ORDER BY id LIMIT 1');
-    return first ? first.id : null;
-  }
-  const first = await queryOne('SELECT id FROM tenants ORDER BY id LIMIT 1');
-  return first ? first.id : null;
+  return resolveRequestTenantId(req.wallboardUser, req.query.tenant_id);
 }
 
 function normalizeStatus(raw, breakName) {
@@ -463,10 +435,6 @@ router.get('/summary', async (req, res) => {
         talk_duration_sec: a.talk_duration_sec || 0,
       }));
 
-    // #region agent log
-    fetch('http://127.0.0.1:7408/ingest/6093344c-d408-4dc3-a762-985868edaa4e',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'164655'},body:JSON.stringify({sessionId:'164655',location:'wallboard.js:summary',message:'Summary response',data:{tenantId,agentsCount:agents.length,statsKeys:Object.keys(stats),average_aht:stats.average_aht,average_occupancy:stats.average_occupancy,leaderboardCount:leaderboard.length,firstAgent:agents[0]?{agent_id:agents[0].agent_id,occupancy:agents[0].occupancy,calls_handled:agents[0].calls_handled,aht:agents[0].aht}:null},timestamp:Date.now(),hypothesisId:'H1'})}).catch(()=>{});
-    // #endregion
-
     return res.json({
       success: true,
       tenant_id: tenantId,
@@ -509,7 +477,7 @@ router.get('/events', async (req, res) => {
  */
 router.get('/tenants', async (req, res) => {
   const u = req.wallboardUser;
-  if (!isSuperadmin(u) && !isAdmin(u)) {
+  if (!isSuperadminRole(u.role) && !isAdminRole(u.role)) {
     return res.json({ success: true, tenants: [] });
   }
   if (u.parent_id != null || u.tenant_id != null) {
@@ -588,17 +556,8 @@ router.post('/monitor', async (req, res) => {
 /** Ensure wallboard user (admin/superadmin only) can act on this agent. Admin: agent must be in same tenant. */
 async function ensureAgentAllowedForWallboardAction(req, agentId) {
   const user = req.wallboardUser;
-  if (user.role !== 'superadmin' && user.role !== 1 && user.role !== 'admin' && user.role !== 2) {
-    return false;
-  }
-  if (user.role === 'superadmin' || user.role === 1) return true;
-  const agentRow = await queryOne(
-    'SELECT parent_id FROM users WHERE phone_login_number = ? AND role = 5 LIMIT 1',
-    [agentId]
-  );
-  const agentTenantId = agentRow?.parent_id ?? null;
-  const adminTenantId = user.parent_id ?? user.tenant_id ?? null;
-  return agentTenantId != null && adminTenantId != null && Number(agentTenantId) === Number(adminTenantId);
+  if (!isSuperadminRole(user.role) && !isAdminRole(user.role)) return false;
+  return ensureAgentInTenant(user, agentId);
 }
 
 /**
@@ -608,24 +567,17 @@ async function ensureAgentAllowedForWallboardAction(req, agentId) {
 router.post('/agents/:agentId/force-end-break', async (req, res) => {
   try {
     const user = req.wallboardUser;
-    if (user.role !== 'superadmin' && user.role !== 1 && user.role !== 'admin' && user.role !== 2) {
+    if (!isSuperadminRole(user.role) && !isAdminRole(user.role)) {
       return res.status(403).json({ success: false, error: 'Admin or superadmin only' });
     }
-    const agentId = (req.params.agentId || '').toString().trim().replace(/\D/g, '') || null;
+    const agentId = sanitizeAgentId(req.params.agentId);
     if (!agentId) return res.status(400).json({ success: false, error: 'Agent ID required' });
     if (!(await ensureAgentAllowedForWallboardAction(req, agentId))) {
       return res.status(403).json({ success: false, error: 'Agent not in your tenant' });
     }
-    const row = await queryOne('SELECT 1 FROM users WHERE phone_login_number = ? AND role = 5 LIMIT 1', [agentId]);
-    if (!row) return res.status(404).json({ success: false, error: 'Agent not found' });
-    const tenantRow = await queryOne('SELECT tenant_id FROM agent_status WHERE agent_id = ? LIMIT 1', [agentId]);
-    const tenantId = tenantRow?.tenant_id ?? null;
-    await query(
-      `UPDATE agent_status SET status = 'LOGGEDIN', break_name = NULL, break_started_at = NULL, timestamp = NOW() WHERE agent_id = ?`,
-      [agentId]
-    );
-    if (tenantId) await logAgentStatusChange(tenantId, agentId, 'READY');
-    return res.json({ success: true, message: 'Agent set to Available' });
+    const result = await performForceEndBreak(agentId);
+    if (!result.success) return res.status(result.status || 400).json({ success: false, error: result.error });
+    return res.json({ success: true, message: result.message });
   } catch (err) {
     console.error('Wallboard force-end-break error:', err);
     return res.status(500).json({ success: false, error: err.message || 'Failed to end break' });
@@ -639,38 +591,18 @@ router.post('/agents/:agentId/force-end-break', async (req, res) => {
 router.post('/agents/:agentId/force-logout', async (req, res) => {
   try {
     const user = req.wallboardUser;
-    if (user.role !== 'superadmin' && user.role !== 1 && user.role !== 'admin' && user.role !== 2) {
+    if (!isSuperadminRole(user.role) && !isAdminRole(user.role)) {
       return res.status(403).json({ success: false, error: 'Admin or superadmin only' });
     }
-    const agentId = (req.params.agentId || '').toString().trim().replace(/\D/g, '') || null;
+    const agentId = sanitizeAgentId(req.params.agentId);
     if (!agentId) return res.status(400).json({ success: false, error: 'Agent ID required' });
     if (!(await ensureAgentAllowedForWallboardAction(req, agentId))) {
       return res.status(403).json({ success: false, error: 'Agent not in your tenant' });
     }
-    const userRow = await queryOne('SELECT id FROM users WHERE phone_login_number = ? AND role = 5 LIMIT 1', [agentId]);
-    if (!userRow) return res.status(404).json({ success: false, error: 'Agent not found' });
-    const userId = userRow.id;
-    const result = await forceLogoutAgent(agentId);
-    if (!result.success) {
-      return res.status(400).json({ success: false, error: result.error || 'Force logout failed' });
-    }
-    await endAgentSession(agentId, 'forced');
-    await query(
-      `UPDATE agent_status SET status = 'LoggedOut', agent_channel_id = NULL, customer_channel_id = NULL,
-       customer_number = NULL, call_id = NULL, queue_name = NULL, session_started_at = NULL,
-       break_name = NULL, break_started_at = NULL, timestamp = NOW() WHERE agent_id = ?`,
-      [agentId]
-    );
-    await query('UPDATE users SET soft_phone_login_status = 0 WHERE phone_login_number = ? LIMIT 1', [agentId]).catch(() => {});
-    await query('DELETE FROM agent_extension_usage WHERE user_id = ?', [userId]).catch(() => {});
-
     const store = req.app.get('sessionStore');
-    if (store) {
-      destroySessionsForUser(store, userId, (err) => {
-        if (err) console.error('Wallboard force-logout destroy sessions:', err);
-      });
-    }
-    return res.json({ success: true, message: 'Agent logged out; channels and session cleared.' });
+    const result = await performForceLogout(agentId, store);
+    if (!result.success) return res.status(result.status || 400).json({ success: false, error: result.error });
+    return res.json({ success: true, message: result.message });
   } catch (err) {
     console.error('Wallboard force-logout error:', err);
     return res.status(500).json({ success: false, error: err.message || 'Force logout failed' });
@@ -757,10 +689,6 @@ router.get('/agents/:agentId/detail', async (req, res) => {
       : 0;
     const occupancy = loginDurationSec > 0 ? Math.min(1, totalTalkTime / loginDurationSec) : 0;
 
-    // #region agent log
-    fetch('http://127.0.0.1:7408/ingest/6093344c-d408-4dc3-a762-985868edaa4e',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'164655'},body:JSON.stringify({sessionId:'164655',location:'wallboard.js:agent_detail',message:'Agent detail response',data:{agentId,callsHandled,callsMissed,aht,occupancy,hasPauseHistory:!!(pauseHistory&&pauseHistory.length)},timestamp:Date.now(),hypothesisId:'H4'})}).catch(()=>{});
-    // #endregion
-
     return res.json({
       success: true,
       agent: {
@@ -789,6 +717,7 @@ router.get('/agents/:agentId/detail', async (req, res) => {
 
 /**
  * Aggregate agent daily stats for a tenant+date and upsert into agent_daily_stats (if table exists).
+ * TODO: Unify with report-aggregator.js aggregateDailyStats to remove duplication.
  */
 async function aggregateAgentDailyStats(tenantId, date) {
   try {
@@ -865,10 +794,6 @@ router.get('/report', async (req, res) => {
     const today = new Date().toISOString().slice(0, 10);
     const useCache = date < today;
 
-    // #region agent log
-    fetch('http://127.0.0.1:7408/ingest/6093344c-d408-4dc3-a762-985868edaa4e',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'164655'},body:JSON.stringify({sessionId:'164655',location:'wallboard.js:report_entry',message:'Report request',data:{date,today,useCache,tenantId},timestamp:Date.now(),hypothesisId:'H2'})}).catch(()=>{});
-    // #endregion
-
     let agents = [];
     if (useCache) {
       try {
@@ -904,9 +829,6 @@ router.get('/report', async (req, res) => {
               occupancy: a.occupancy != null ? Number(a.occupancy) : null,
             };
           });
-          // #region agent log
-          fetch('http://127.0.0.1:7408/ingest/6093344c-d408-4dc3-a762-985868edaa4e',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'164655'},body:JSON.stringify({sessionId:'164655',location:'wallboard.js:report_cache_hit',message:'Report from cache',data:{report_source:'cache',agentsCount:agents.length,firstAgent:agents[0]||null},timestamp:Date.now(),hypothesisId:'H3'})}).catch(()=>{});
-          // #endregion
         }
       } catch (e) {
         if (e?.code !== 'ER_NO_SUCH_TABLE') { /* ignore */ }
@@ -1003,9 +925,6 @@ router.get('/report', async (req, res) => {
           occupancy,
         };
       });
-      // #region agent log
-      fetch('http://127.0.0.1:7408/ingest/6093344c-d408-4dc3-a762-985868edaa4e',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'164655'},body:JSON.stringify({sessionId:'164655',location:'wallboard.js:report_computed',message:'Report computed on-the-fly',data:{report_source:'computed',agentsCount:agents.length,firstAgent:agents[0]||null},timestamp:Date.now(),hypothesisId:'H3'})}).catch(()=>{});
-      // #endregion
       if (useCache && agents.length > 0) aggregateAgentDailyStats(tenantId, date).catch(() => {});
     }
 
@@ -1037,32 +956,21 @@ router.get('/report', async (req, res) => {
 
     const formatCsv = (req.query.format || '').toString().toLowerCase() === 'csv';
     if (formatCsv) {
-      const csvEscape = (s) => {
-        if (s == null) return '';
-        const str = String(s);
-        if (/[,"\r\n]/.test(str)) return `"${str.replace(/"/g, '""')}"`;
-        return str;
-      };
       const headers = ['Agent ID', 'Name', 'Login Time (sec)', 'Productive Time (sec)', 'Talk Time (sec)', 'Wrap Time (sec)', 'Pause Time (sec)', 'Calls Handled', 'Calls Missed', 'AHT (sec)', 'Occupancy'];
-      const lines = [headers.map(csvEscape).join(',')];
-      for (const a of agents) {
-        lines.push([
-          a.agent_id,
-          a.name,
-          a.login_time,
-          a.productive_time ?? Math.max(0, (a.login_time || 0) - (a.total_pause_time || 0)),
-          a.total_talk_time,
-          a.total_wrap_time ?? 0,
-          a.total_pause_time,
-          a.calls_handled,
-          a.calls_missed ?? 0,
-          a.aht,
-          a.occupancy != null ? (Math.round(a.occupancy * 10000) / 100) + '%' : '',
-        ].map(csvEscape).join(','));
-      }
-      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-      res.setHeader('Content-Disposition', `attachment; filename="wallboard-daily-${date}.csv"`);
-      return res.send('\uFEFF' + lines.join('\n'));
+      const rows = agents.map((a) => [
+        a.agent_id,
+        a.name,
+        a.login_time,
+        a.productive_time ?? Math.max(0, (a.login_time || 0) - (a.total_pause_time || 0)),
+        a.total_talk_time,
+        a.total_wrap_time ?? 0,
+        a.total_pause_time,
+        a.calls_handled,
+        a.calls_missed ?? 0,
+        a.aht,
+        a.occupancy != null ? (Math.round(a.occupancy * 10000) / 100) + '%' : '',
+      ]);
+      return buildCsvResponse(res, `wallboard-daily-${date}.csv`, headers, rows);
     }
 
     return res.json({ success: true, date, agents, summary });

@@ -1,4 +1,6 @@
 import { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import { normalizeRole } from '../utils/roles.js';
+import { apiFetch } from '../utils/api.js';
 
 const ROLES = {
   SUPERADMIN: 'superadmin',
@@ -6,24 +8,6 @@ const ROLES = {
   USER: 'user',
   AGENT: 'agent',
 };
-
-const ROLE_IDS = { 1: 'superadmin', 2: 'admin', 3: 'user', 4: 'campaign', 5: 'agent' };
-function normalizeRole(role) {
-  if (role == null) return 'user';
-  const r = ROLE_IDS[Number(role)] || role;
-  return typeof r === 'string' ? r : 'user';
-}
-
-const API_BASE = import.meta.env.DEV ? '' : (import.meta.env.VITE_API_URL || '');
-
-async function apiFetch(path, options = {}) {
-  const res = await fetch(`${API_BASE}${path}`, {
-    ...options,
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json', ...options.headers },
-  });
-  return res;
-}
 
 const AuthContext = createContext(null);
 

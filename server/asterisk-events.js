@@ -1,11 +1,9 @@
 /**
- * Asterisk event subscription (AMI/ARI). Optional Phase 3 extension.
- * When configured, can connect to AMI or ARI WebSocket and push events into call-handler.
- * For now we rely on dialplan HTTP callbacks (IncomingCall, CallAnswered, CallHangup).
+ * @deprecated This module is a stub. AMI/ARI events are handled by:
+ * - ari-stasis-queue.js (ARI WebSocket for queue routing)
+ * - routes/asterisk.js (HTTP callbacks from Asterisk dialplan)
+ * This file is kept for backwards compatibility but does nothing.
  */
-export function startAsteriskEvents() {
-  // Future: connect to AMI or ARI, subscribe to channel/bridge events, call call-handler.
-  if (process.env.ASTERISK_AMI_HOST || process.env.ASTERISK_ARI_WS) {
-    console.log('[asterisk-events] AMI/ARI WebSocket not yet implemented; using HTTP callbacks.');
-  }
+export default function initAsteriskEvents() {
+  // No-op: events handled elsewhere
 }

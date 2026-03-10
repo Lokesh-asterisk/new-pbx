@@ -632,3 +632,54 @@
   .wb-tabs { margin-left: 0; }
   .wb-global-metrics { grid-template-columns: repeat(3, 1fr); }
 }
+
+/* Toast notifications */
+.toast-container {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.toast {
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 0.875rem;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  animation: slideIn 0.3s ease;
+  max-width: 360px;
+}
+.toast-success { background: #16a34a; }
+.toast-error { background: #dc2626; }
+.toast-warning { background: #d97706; }
+.toast-info { background: #2563eb; }
+@keyframes slideIn {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+/* Row-level status tinting for agent tables */
+.agent-row-on-call { background-color: rgba(59, 130, 246, 0.08); }
+.agent-row-paused { background-color: rgba(245, 158, 11, 0.08); }
+.agent-row-available { background-color: rgba(34, 197, 94, 0.06); }
+.agent-row-offline { opacity: 0.6; }
+
+/* Connection quality indicator */
+.connection-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.75rem;
+}
+.connection-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.connection-dot.connected { background: #22c55e; }
+.connection-dot.disconnected { background: #ef4444; }
+.connection-dot.polling { background: #f59e0b; }

@@ -53,7 +53,10 @@ export async function getAllAgentStates(tenantId) {
   if (!redisAvailable || !redis) return null;
   try {
     const pattern = `${KEY_PREFIX}agent:${tenantId}:*`;
-    const keys = await redis.keys(pattern);
+    const keys = [];
+    for await (const key of redis.scanIterator({ MATCH: pattern, COUNT: 100 })) {
+      keys.push(key);
+    }
     if (keys.length === 0) return [];
     const pipeline = redis.multi();
     for (const k of keys) pipeline.get(k);

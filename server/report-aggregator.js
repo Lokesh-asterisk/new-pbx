@@ -279,72 +279,90 @@ async function aggregateDailyStats(tenantId, date) {
       [tenantId]
     );
 
+    let callStatsByAgent = {};
+    try {
+      const crRows = await query(
+        `SELECT
+           COALESCE(agent_id, '') AS agent_id,
+           agent_user_id,
+           COUNT(*) AS offered,
+           SUM(CASE WHEN status NOT IN ('failed','abandoned') AND answer_time IS NOT NULL THEN 1 ELSE 0 END) AS answered,
+           SUM(CASE WHEN status IN ('abandoned') OR (answer_time IS NULL AND status NOT IN ('failed')) THEN 1 ELSE 0 END) AS missed,
+           SUM(CASE WHEN transfer_status = 1 THEN 1 ELSE 0 END) AS transferred,
+           COALESCE(SUM(CASE WHEN status NOT IN ('failed','abandoned') THEN talk_sec ELSE 0 END), 0) AS talk,
+           COALESCE(SUM(CASE WHEN status NOT IN ('failed','abandoned') THEN duration_sec ELSE 0 END), 0) AS dur
+         FROM call_records
+         WHERE tenant_id = ? AND DATE(start_time) = ?
+         GROUP BY agent_id, agent_user_id`,
+        [tenantId, date]
+      );
+      for (const r of crRows) {
+        const key = String(r.agent_id || '').trim() || String(r.agent_user_id || '');
+        callStatsByAgent[key] = r;
+      }
+    } catch (_) {}
+
+    let pauseByAgent = {};
+    try {
+      const pauseRows = await query(
+        `SELECT agent_id, COALESCE(SUM(duration_sec), 0) AS s FROM agent_status_log
+         WHERE tenant_id = ? AND status = 'PAUSED' AND DATE(start_time) = ? AND end_time IS NOT NULL
+         GROUP BY agent_id`,
+        [tenantId, date]
+      );
+      for (const r of pauseRows) pauseByAgent[r.agent_id] = Number(r.s) || 0;
+    } catch (_) {}
+
+    let pauseByUserId = {};
+    try {
+      const sbRows = await query(
+        `SELECT agent_id, COALESCE(SUM(TIMESTAMPDIFF(SECOND, start_time, COALESCE(end_time, NOW()))), 0) AS s
+         FROM session_agent_breaks WHERE tenant_id = ? AND DATE(start_time) = ?
+         GROUP BY agent_id`,
+        [tenantId, date]
+      );
+      for (const r of sbRows) pauseByUserId[r.agent_id] = Number(r.s) || 0;
+    } catch (_) {}
+
+    let loginByAgent = {};
+    try {
+      const sessRows = await query(
+        `SELECT agent_id, COALESCE(SUM(session_duration_sec), 0) AS s
+         FROM agent_sessions WHERE tenant_id = ? AND DATE(login_time) = ? AND logout_time IS NOT NULL
+         GROUP BY agent_id`,
+        [tenantId, date]
+      );
+      for (const r of sessRows) loginByAgent[r.agent_id] = Number(r.s) || 0;
+    } catch (_) {}
+
+    let readyByAgent = {};
+    try {
+      const readyRows = await query(
+        `SELECT agent_id, COALESCE(SUM(duration_sec), 0) AS s FROM agent_status_log
+         WHERE tenant_id = ? AND status = 'READY' AND DATE(start_time) = ? AND end_time IS NOT NULL
+         GROUP BY agent_id`,
+        [tenantId, date]
+      );
+      for (const r of readyRows) readyByAgent[r.agent_id] = Number(r.s) || 0;
+    } catch (_) {}
+
     for (const u of agents) {
       const agentId = String(u.agent_id || '').trim();
       if (!agentId) continue;
 
-      let callsAnswered = 0, callsMissed = 0, callsOffered = 0, callsTransferred = 0;
-      let totalTalk = 0, totalDuration = 0;
-      try {
-        const cr = await queryOne(
-          `SELECT
-             COUNT(*) AS offered,
-             SUM(CASE WHEN status NOT IN ('failed','abandoned') AND answer_time IS NOT NULL THEN 1 ELSE 0 END) AS answered,
-             SUM(CASE WHEN status IN ('abandoned') OR (answer_time IS NULL AND status NOT IN ('failed')) THEN 1 ELSE 0 END) AS missed,
-             SUM(CASE WHEN transfer_status = 1 THEN 1 ELSE 0 END) AS transferred,
-             COALESCE(SUM(CASE WHEN status NOT IN ('failed','abandoned') THEN talk_sec ELSE 0 END), 0) AS talk,
-             COALESCE(SUM(CASE WHEN status NOT IN ('failed','abandoned') THEN duration_sec ELSE 0 END), 0) AS dur
-           FROM call_records
-           WHERE tenant_id = ? AND (agent_id = ? OR agent_user_id = ?) AND DATE(start_time) = ?`,
-          [tenantId, agentId, u.user_id, date]
-        );
-        callsOffered = Number(cr?.offered) || 0;
-        callsAnswered = Number(cr?.answered) || 0;
-        callsMissed = Number(cr?.missed) || 0;
-        callsTransferred = Number(cr?.transferred) || 0;
-        totalTalk = Number(cr?.talk) || 0;
-        totalDuration = Number(cr?.dur) || 0;
-      } catch (_) {}
+      const cr = callStatsByAgent[agentId] || callStatsByAgent[String(u.user_id)] || {};
+      const callsOffered = Number(cr.offered) || 0;
+      const callsAnswered = Number(cr.answered) || 0;
+      const callsMissed = Number(cr.missed) || 0;
+      const callsTransferred = Number(cr.transferred) || 0;
+      const totalTalk = Number(cr.talk) || 0;
+      const totalDuration = Number(cr.dur) || 0;
 
-      let pauseSec = 0;
-      try {
-        const br = await queryOne(
-          `SELECT COALESCE(SUM(duration_sec), 0) AS s FROM agent_status_log
-           WHERE tenant_id = ? AND agent_id = ? AND status = 'PAUSED' AND DATE(start_time) = ? AND end_time IS NOT NULL`,
-          [tenantId, agentId, date]
-        );
-        pauseSec = Number(br?.s) || 0;
-      } catch (_) {}
-      if (!pauseSec) {
-        try {
-          const sbr = await queryOne(
-            `SELECT COALESCE(SUM(TIMESTAMPDIFF(SECOND, start_time, COALESCE(end_time, NOW()))), 0) AS s
-             FROM session_agent_breaks WHERE tenant_id = ? AND agent_id = ? AND DATE(start_time) = ?`,
-            [tenantId, u.user_id, date]
-          );
-          pauseSec = Number(sbr?.s) || 0;
-        } catch (_) {}
-      }
+      const pauseSec = pauseByAgent[agentId] || pauseByUserId[u.user_id] || 0;
 
-      let readySec = 0;
-      try {
-        const rr = await queryOne(
-          `SELECT COALESCE(SUM(duration_sec), 0) AS s FROM agent_status_log
-           WHERE tenant_id = ? AND agent_id = ? AND status = 'READY' AND DATE(start_time) = ? AND end_time IS NOT NULL`,
-          [tenantId, agentId, date]
-        );
-        readySec = Number(rr?.s) || 0;
-      } catch (_) {}
+      const readySec = readyByAgent[agentId] || 0;
 
-      let loginSec = 0;
-      try {
-        const sess = await queryOne(
-          `SELECT COALESCE(SUM(session_duration_sec), 0) AS s
-           FROM agent_sessions WHERE tenant_id = ? AND agent_id = ? AND DATE(login_time) = ? AND logout_time IS NOT NULL`,
-          [tenantId, agentId, date]
-        );
-        loginSec = Number(sess?.s) || 0;
-      } catch (_) {}
+      const loginSec = loginByAgent[agentId] || 0;
 
       const wrapSec = Math.max(0, totalDuration - totalTalk);
       const occupancy = loginSec > 0 ? Math.min(1, (totalTalk + wrapSec) / loginSec) : null;

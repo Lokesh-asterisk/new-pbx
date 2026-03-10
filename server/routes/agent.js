@@ -21,6 +21,7 @@ import {
 } from '../call-handler.js';
 import { setExtensionAgentUserId } from '../agent-extension-resolver.js';
 import { endAgentSession, logAgentStatusChange } from '../agent-sessions.js';
+import { normalizePhoneForBlacklist } from '../utils/phone.js';
 
 const router = express.Router();
 
@@ -520,11 +521,6 @@ router.post('/clear-extension', async (req, res) => {
 /**
  * Block a number (e.g. prank caller). Adds to tenant blacklist so future calls from this number are dropped at InboundRoute.
  */
-function normalizePhoneForBlacklist(raw) {
-  if (raw == null || typeof raw !== 'string') return '';
-  return raw.replace(/\D/g, '');
-}
-
 router.post('/block-number', async (req, res) => {
   try {
     const tenantId = req.agentUser.parent_id;

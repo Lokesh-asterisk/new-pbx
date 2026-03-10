@@ -1,13 +1,12 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { useAuth } from '../context/AuthContext';
 import {
   BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
 } from 'recharts';
+import Layout from '../components/Layout';
+import { API_BASE, apiJson as apiFetch } from '../utils/api.js';
 import './Reports.css';
-
-const API = import.meta.env.DEV ? '' : (import.meta.env.VITE_API_URL || '');
 
 const TABS = [
   { id: 'performance', label: 'Performance' },
@@ -41,14 +40,7 @@ function fmtSecShort(s) {
   return m > 0 ? `${h}h ${m}m` : `${h}h`;
 }
 
-async function apiFetch(path) {
-  const res = await fetch(`${API}${path}`, { credentials: 'include' });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return res.json();
-}
-
 export default function Reports() {
-  const { user } = useAuth();
   const [tab, setTab] = useState('performance');
   const [period, setPeriod] = useState('daily');
   const [startDate, setStartDate] = useState(new Date().toISOString().slice(0, 10));
@@ -168,7 +160,7 @@ export default function Reports() {
   function handleCsvExport() {
     const af = agentFilter ? `&agent_id=${agentFilter}` : '';
     const qf = queueFilter ? `&queue=${queueFilter}` : '';
-    window.open(`${API}/api/reports/performance?${dateParams}${tenantParam}${af}${qf}&format=csv`, '_blank');
+    window.open(`${API_BASE}/api/reports/performance?${dateParams}${tenantParam}${af}${qf}&format=csv`, '_blank');
   }
 
   const scoreClass = (s) => s >= 70 ? 'rpt-score-high' : s >= 40 ? 'rpt-score-mid' : 'rpt-score-low';
@@ -178,16 +170,14 @@ export default function Reports() {
   const tooltipStyle = { backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '8px', color: '#e2e8f0', fontSize: '0.8125rem' };
 
   return (
-    <div className="reports">
-      <div className="reports-header">
-        <h1>Agent Performance Reports</h1>
+    <Layout title="Agent Performance Reports" subtitle="PBX Call Centre — Reports">
+      <div className="reports">
         <div className="reports-header-actions">
           <a href="/wallboard" className="rpt-btn">Back to Wallboard</a>
           <a href="/dashboard" className="rpt-btn">Dashboard</a>
         </div>
-      </div>
 
-      {/* Tabs */}
+        {/* Tabs */}
       <div className="rpt-tabs">
         {TABS.map(t => (
           <button key={t.id} className={`rpt-tab${tab === t.id ? ' rpt-tab-active' : ''}`} onClick={() => setTab(t.id)}>
@@ -268,7 +258,8 @@ export default function Reports() {
       )}
       {!loading && tab === 'queues' && <QueueTab data={queueData} tooltipStyle={tooltipStyle} />}
       {!loading && tab === 'alerts' && <AlertsTab data={alertData} />}
-    </div>
+      </div>
+    </Layout>
   );
 }
 
