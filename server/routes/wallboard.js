@@ -13,6 +13,7 @@ import { performForceEndBreak, performForceLogout } from '../utils/agent-actions
 import { resolveRequestTenantId, ensureAgentInTenant, isSuperadminRole, isAdminRole } from '../utils/tenant.js';
 import { buildCsvResponse } from '../utils/csv.js';
 import { sanitizeAgentId } from '../utils/validation.js';
+import { validate, wallboardMonitorSchema } from '../utils/schemas.js';
 
 const router = express.Router();
 
@@ -496,7 +497,7 @@ router.get('/tenants', async (req, res) => {
  * POST /api/wallboard/monitor
  * Supervisor (user), admin, superadmin: Listen / Whisper / Barge on an agent call.
  */
-router.post('/monitor', async (req, res) => {
+router.post('/monitor', validate(wallboardMonitorSchema), async (req, res) => {
   try {
     const user = req.wallboardUser;
     const { agent_id: rawAgentId, mode, supervisor_extension } = req.body || {};

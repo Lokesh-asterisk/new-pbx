@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import ThemeToggle from './ThemeToggle';
 import './Layout.css';
 
 export default function Layout({ children, title, subtitle }) {
@@ -22,6 +23,7 @@ export default function Layout({ children, title, subtitle }) {
           </div>
         </div>
         <div className="header-right">
+          <ThemeToggle />
           <span className="user-badge">{user?.displayName || user?.role}</span>
           <span className="role-tag">{user?.role}</span>
           <button type="button" className="btn-logout" onClick={handleLogout}>

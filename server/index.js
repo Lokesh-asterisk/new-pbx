@@ -14,11 +14,29 @@ import reportRoutes from './routes/reports.js';
 import { startQueueStasisClient } from './ari-stasis-queue.js';
 import { initRedis } from './redis-wallboard.js';
 import { startReportAggregator } from './report-aggregator.js';
+import { initAriRedisState } from './ari-state-redis.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-const sessionStore = new session.MemoryStore();
+let sessionStore;
+const redisUrl = (process.env.REDIS_URL || '').trim();
+if (redisUrl) {
+  try {
+    const { default: RedisStore } = await import('connect-redis');
+    const { createClient } = await import('redis');
+    const redisSessionClient = createClient({ url: redisUrl });
+    redisSessionClient.on('error', (err) => console.error('[session-redis]', err.message));
+    await redisSessionClient.connect();
+    sessionStore = new RedisStore({ client: redisSessionClient, prefix: 'sess:' });
+    console.log('[startup] Session store: Redis');
+  } catch (err) {
+    console.warn('[startup] Redis session store unavailable, falling back to MemoryStore:', err.message);
+    sessionStore = new session.MemoryStore();
+  }
+} else {
+  sessionStore = new session.MemoryStore();
+}
 const corsOrigins = (process.env.CORS_ORIGIN || 'http://localhost:5173')
   .split(',')
   .map((o) => o.trim())
@@ -76,7 +94,8 @@ app.listen(PORT, async () => {
     console.warn('[startup] SESSION_SECRET is not set or using default value. Set a secure SESSION_SECRET in production.');
   }
   console.log(`PBX API running at http://localhost:${PORT}`);
-  startQueueStasisClient();
   await initRedis().catch(e => console.warn('[startup] Redis unavailable:', e?.message));
+  await initAriRedisState().catch(e => console.warn('[startup] ARI Redis state unavailable:', e?.message));
+  await startQueueStasisClient();
   startReportAggregator();
 });

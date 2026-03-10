@@ -4,6 +4,10 @@ import Layout from '../components/Layout';
 import { useAuth } from '../context/AuthContext';
 import { apiFetch, API_BASE } from '../utils/api';
 import { formatDurationVerbose, formatSecVerbose } from '../utils/format';
+import AsteriskLogsView from './superadmin/AsteriskLogsView';
+import RolePermissionsView from './superadmin/RolePermissionsView';
+import CDRView from './superadmin/CDRView';
+import LiveAgentsView from './superadmin/LiveAgentsView';
 import './Dashboard.css';
 import './SuperAdmin.css';
 
@@ -627,9 +631,9 @@ export default function SuperAdmin() {
   }, [tenants, tenantSearchName, tenantFilterHas]);
 
   const getTenantLabel = (id) => {
-    if (id == null) return '—';
+    if (id == null) return 'â€”';
     const name = tenantNameById[id];
-    return name ? `${id} · ${name}` : String(id);
+    return name ? `${id} Â· ${name}` : String(id);
   };
 
   const ResourceTenantFilterDropdown = ({ viewKey, label = 'Filter by tenant' }) => (
@@ -1224,7 +1228,7 @@ export default function SuperAdmin() {
       const data = await res.json().catch(() => ({}));
       if (res.ok) {
         const msg = data.message || (data.success ? 'Synced.' : 'Sync skipped or failed.');
-        setSyncAsteriskMessage(data.skipped ? `⚠ ${msg}` : msg);
+        setSyncAsteriskMessage(data.skipped ? `âš  ${msg}` : msg);
       } else {
         setError(data.message || data.error || 'Sync failed');
       }
@@ -2002,7 +2006,7 @@ export default function SuperAdmin() {
   const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
   const layoutTitle = isSuperadmin ? 'Super Admin' : (user?.role === 'admin' ? 'Admin' : user?.role === 'user' ? 'User' : 'Dashboard');
-  const layoutSubtitle = isSuperadmin ? 'PBX Call Centre — Full system control' : 'PBX Call Centre';
+  const layoutSubtitle = isSuperadmin ? 'PBX Call Centre â€” Full system control' : 'PBX Call Centre';
 
   return (
     <Layout title={layoutTitle} subtitle={layoutSubtitle}>
@@ -2032,27 +2036,27 @@ export default function SuperAdmin() {
               <h2 className="superadmin-section-title">System overview</h2>
               <div className="superadmin-stats-grid">
                 <div className="superadmin-stat-card">
-                  <div className="superadmin-stat-value">{stats?.active_agents ?? '—'}</div>
+                  <div className="superadmin-stat-value">{stats?.active_agents ?? 'â€”'}</div>
                   <div className="superadmin-stat-label">Active agents</div>
                 </div>
                 <div className="superadmin-stat-card">
-                  <div className="superadmin-stat-value">{stats?.total_users ?? '—'}</div>
+                  <div className="superadmin-stat-value">{stats?.total_users ?? 'â€”'}</div>
                   <div className="superadmin-stat-label">Total users</div>
                 </div>
                 <div className="superadmin-stat-card">
-                  <div className="superadmin-stat-value">{stats?.extensions ?? '—'}</div>
+                  <div className="superadmin-stat-value">{stats?.extensions ?? 'â€”'}</div>
                   <div className="superadmin-stat-label">PJSIP extensions</div>
                 </div>
                 <div className="superadmin-stat-card">
-                  <div className="superadmin-stat-value">{stats?.trunks ?? '—'}</div>
+                  <div className="superadmin-stat-value">{stats?.trunks ?? 'â€”'}</div>
                   <div className="superadmin-stat-label">SIP trunks</div>
                 </div>
                 <div className="superadmin-stat-card">
-                  <div className="superadmin-stat-value">{stats?.queues ?? '—'}</div>
+                  <div className="superadmin-stat-value">{stats?.queues ?? 'â€”'}</div>
                   <div className="superadmin-stat-label">Queues</div>
                 </div>
                 <div className="superadmin-stat-card">
-                  <div className="superadmin-stat-value">{stats?.inbound_routes ?? '—'}</div>
+                  <div className="superadmin-stat-value">{stats?.inbound_routes ?? 'â€”'}</div>
                   <div className="superadmin-stat-label">Inbound routes</div>
                 </div>
               </div>
@@ -2173,7 +2177,7 @@ export default function SuperAdmin() {
               </form>
             )}
             {loading && tenants.length === 0 ? (
-              <p className="superadmin-loading">Loading tenants…</p>
+              <p className="superadmin-loading">Loading tenantsâ€¦</p>
             ) : (
               <div className="superadmin-table-wrap">
                 <table className="superadmin-table">
@@ -2194,11 +2198,11 @@ export default function SuperAdmin() {
                             {t.has_inbound_routes === 1 && <span title="Inbound routes">Inbound</span>}
                             {t.has_outbound_routes === 1 && <span title="Outbound routes">Outbound</span>}
                             {t.has_campaigns === 1 && <span title="Campaigns">Campaigns</span>}
-                            {!(t.has_users === 1 || t.has_extensions === 1 || t.has_trunks === 1 || t.has_queues === 1 || t.has_inbound_routes === 1 || t.has_outbound_routes === 1 || t.has_campaigns === 1) && '—'}
+                            {!(t.has_users === 1 || t.has_extensions === 1 || t.has_trunks === 1 || t.has_queues === 1 || t.has_inbound_routes === 1 || t.has_outbound_routes === 1 || t.has_campaigns === 1) && 'â€”'}
                           </span>
                         </td>
                         <td>{t.mask_caller_number_agent === 1 ? 'Yes' : 'No'}</td>
-                        <td>{t.created_at ? new Date(t.created_at).toLocaleString() : '—'}</td>
+                        <td>{t.created_at ? new Date(t.created_at).toLocaleString() : 'â€”'}</td>
                         <td>
                           <button type="button" className="action-btn" onClick={() => { setEditingTenant(t); setEditTenantName(t.name || ''); setEditTenantMaskCaller(t.mask_caller_number_agent === 1); }}>Edit</button>
                           <button type="button" className="action-btn superadmin-delete-btn" onClick={() => handleDeleteTenant(t)}>Delete</button>
@@ -2247,9 +2251,9 @@ export default function SuperAdmin() {
                 <label className="superadmin-parent-label">
                   Tenant (for agents)
                   <select name="parent_id" className="superadmin-select">
-                    <option value="">—</option>
+                    <option value="">â€”</option>
                     {tenants.map((t) => (
-                      <option key={t.id} value={t.id}>{t.id} · {t.name}</option>
+                      <option key={t.id} value={t.id}>{t.id} Â· {t.name}</option>
                     ))}
                   </select>
                 </label>
@@ -2317,9 +2321,9 @@ export default function SuperAdmin() {
                         value={editParentId}
                         onChange={(e) => setEditParentId(e.target.value)}
                       >
-                        <option value="">—</option>
+                        <option value="">â€”</option>
                         {tenants.map((t) => (
-                          <option key={t.id} value={t.id}>{t.id} · {t.name}</option>
+                          <option key={t.id} value={t.id}>{t.id} Â· {t.name}</option>
                         ))}
                       </select>
                     </label>
@@ -2379,7 +2383,7 @@ export default function SuperAdmin() {
               </form>
             )}
             {loading && users.length === 0 ? (
-              <p className="superadmin-loading">Loading users…</p>
+              <p className="superadmin-loading">Loading usersâ€¦</p>
             ) : (
               <>
                 <div className="superadmin-users-filters">
@@ -2429,7 +2433,7 @@ export default function SuperAdmin() {
                           {label}
                           {userSortKey === key && (
                             <span className="sort-indicator" aria-hidden="true">
-                              {userSortDir === 'asc' ? ' ↑' : ' ↓'}
+                              {userSortDir === 'asc' ? ' â†‘' : ' â†“'}
                             </span>
                           )}
                         </th>
@@ -2444,11 +2448,11 @@ export default function SuperAdmin() {
                         <td>{u.username}</td>
                         <td>{u.email}</td>
                         <td>{u.role}</td>
-                        <td>{u.parent_id != null ? getTenantLabel(u.parent_id) : '—'}</td>
-                        <td>{u.phone_login_number || '—'}</td>
-                        <td>{u.phone_login_set ? 'Set' : '—'}</td>
+                        <td>{u.parent_id != null ? getTenantLabel(u.parent_id) : 'â€”'}</td>
+                        <td>{u.phone_login_number || 'â€”'}</td>
+                        <td>{u.phone_login_set ? 'Set' : 'â€”'}</td>
                         <td>{u.account_status === 1 ? 'Active' : 'Inactive'}</td>
-                        <td>{u.created_at ? new Date(u.created_at).toLocaleString() : '—'}</td>
+                        <td>{u.created_at ? new Date(u.created_at).toLocaleString() : 'â€”'}</td>
                         <td>
                           <button
                             type="button"
@@ -2500,7 +2504,7 @@ export default function SuperAdmin() {
                   <select name="tenant_id" className="superadmin-select" required>
                     {tenants.length === 0 && <option value="1">1 (add tenants in Tenants section)</option>}
                     {tenants.map((t) => (
-                      <option key={t.id} value={t.id}>{t.id} · {t.name}</option>
+                      <option key={t.id} value={t.id}>{t.id} Â· {t.name}</option>
                     ))}
                   </select>
                 </label>
@@ -2529,7 +2533,7 @@ export default function SuperAdmin() {
                 {createExtensionFailoverType === 'queue' && (
                   <label>Queue
                     <select name="failover_destination_id" className="superadmin-select">
-                      <option value="">— Select queue —</option>
+                      <option value="">â€” Select queue â€”</option>
                       {queues.map((q) => (
                         <option key={q.id} value={q.id}>{q.name}</option>
                       ))}
@@ -2539,7 +2543,7 @@ export default function SuperAdmin() {
                 {createExtensionFailoverType === 'extension' && (
                   <label>Extension
                     <select name="failover_destination_id" className="superadmin-select">
-                      <option value="">— Select extension —</option>
+                      <option value="">â€” Select extension â€”</option>
                       {extensions.map((e) => (
                         <option key={e.id} value={e.id}>{e.name}</option>
                       ))}
@@ -2549,7 +2553,7 @@ export default function SuperAdmin() {
                 {createExtensionFailoverType === 'ivr' && (
                   <label>IVR
                     <select name="failover_destination_id" className="superadmin-select">
-                      <option value="">— Select IVR —</option>
+                      <option value="">â€” Select IVR â€”</option>
                       {ivrMenus.map((m) => (
                         <option key={m.id} value={m.id}>{m.name}</option>
                       ))}
@@ -2559,7 +2563,7 @@ export default function SuperAdmin() {
                 {createExtensionFailoverType === 'timecondition' && (
                   <label>Time condition
                     <select name="failover_destination_id" className="superadmin-select">
-                      <option value="">— Select —</option>
+                      <option value="">â€” Select â€”</option>
                       {timeConditions.map((t) => (
                         <option key={t.id} value={t.id}>{t.name}</option>
                       ))}
@@ -2569,7 +2573,7 @@ export default function SuperAdmin() {
                 {createExtensionFailoverType === 'voicemail' && (
                   <label>Voicemail
                     <select name="failover_destination_id" className="superadmin-select">
-                      <option value="">— Select —</option>
+                      <option value="">â€” Select â€”</option>
                       {voicemailBoxes.map((v) => (
                         <option key={v.id} value={v.id}>{v.mailbox}</option>
                       ))}
@@ -2579,7 +2583,7 @@ export default function SuperAdmin() {
                 {createExtensionFailoverType === 'announcement' && (
                   <label>Announcement (sound)
                     <select name="failover_destination_id" className="superadmin-select">
-                      <option value="">— Select —</option>
+                      <option value="">â€” Select â€”</option>
                       {soundFiles.map((s) => (
                         <option key={s.id} value={s.id}>{s.name}</option>
                       ))}
@@ -2607,7 +2611,7 @@ export default function SuperAdmin() {
                     onChange={(e) => setEditExtTenantId(e.target.value)}
                   >
                     {tenants.map((t) => (
-                      <option key={t.id} value={t.id}>{t.id} · {t.name}</option>
+                      <option key={t.id} value={t.id}>{t.id} Â· {t.name}</option>
                     ))}
                   </select>
                 </label>
@@ -2643,7 +2647,7 @@ export default function SuperAdmin() {
                 {editExtFailoverType === 'queue' && (
                   <label>Queue
                     <select className="superadmin-select" value={editExtFailoverId} onChange={(e) => setEditExtFailoverId(e.target.value)}>
-                      <option value="">— Select queue —</option>
+                      <option value="">â€” Select queue â€”</option>
                       {queues.map((q) => (
                         <option key={q.id} value={q.id}>{q.name}</option>
                       ))}
@@ -2653,7 +2657,7 @@ export default function SuperAdmin() {
                 {editExtFailoverType === 'extension' && (
                   <label>Extension
                     <select className="superadmin-select" value={editExtFailoverId} onChange={(e) => setEditExtFailoverId(e.target.value)}>
-                      <option value="">— Select extension —</option>
+                      <option value="">â€” Select extension â€”</option>
                       {extensions.filter((e) => e.id !== editingExtension?.id).map((e) => (
                         <option key={e.id} value={e.id}>{e.name}</option>
                       ))}
@@ -2663,7 +2667,7 @@ export default function SuperAdmin() {
                 {editExtFailoverType === 'ivr' && (
                   <label>IVR
                     <select className="superadmin-select" value={editExtFailoverId} onChange={(e) => setEditExtFailoverId(e.target.value)}>
-                      <option value="">— Select IVR —</option>
+                      <option value="">â€” Select IVR â€”</option>
                       {ivrMenus.map((m) => (
                         <option key={m.id} value={m.id}>{m.name}</option>
                       ))}
@@ -2673,7 +2677,7 @@ export default function SuperAdmin() {
                 {editExtFailoverType === 'timecondition' && (
                   <label>Time condition
                     <select className="superadmin-select" value={editExtFailoverId} onChange={(e) => setEditExtFailoverId(e.target.value)}>
-                      <option value="">— Select —</option>
+                      <option value="">â€” Select â€”</option>
                       {timeConditions.map((t) => (
                         <option key={t.id} value={t.id}>{t.name}</option>
                       ))}
@@ -2683,7 +2687,7 @@ export default function SuperAdmin() {
                 {editExtFailoverType === 'voicemail' && (
                   <label>Voicemail
                     <select className="superadmin-select" value={editExtFailoverId} onChange={(e) => setEditExtFailoverId(e.target.value)}>
-                      <option value="">— Select —</option>
+                      <option value="">â€” Select â€”</option>
                       {voicemailBoxes.map((v) => (
                         <option key={v.id} value={v.id}>{v.mailbox}</option>
                       ))}
@@ -2693,7 +2697,7 @@ export default function SuperAdmin() {
                 {editExtFailoverType === 'announcement' && (
                   <label>Announcement (sound)
                     <select className="superadmin-select" value={editExtFailoverId} onChange={(e) => setEditExtFailoverId(e.target.value)}>
-                      <option value="">— Select —</option>
+                      <option value="">â€” Select â€”</option>
                       {soundFiles.map((s) => (
                         <option key={s.id} value={s.id}>{s.name}</option>
                       ))}
@@ -2726,7 +2730,7 @@ export default function SuperAdmin() {
             )}
             <ResourceTenantFilterDropdown viewKey="extensions" />
             {loading && extensions.length === 0 ? (
-              <p className="superadmin-loading">Loading SIP extensions…</p>
+              <p className="superadmin-loading">Loading SIP extensionsâ€¦</p>
             ) : (
               <div className="superadmin-table-wrap">
                 <table className="superadmin-table">
@@ -2750,20 +2754,20 @@ export default function SuperAdmin() {
                         <td>{ext.id}</td>
                         <td>{getTenantLabel(ext.tenant_id)}</td>
                         <td>{ext.name}</td>
-                        <td>{ext.secret ? '••••' : '—'}</td>
-                        <td>{ext.context || '—'}</td>
-                        <td>{ext.host || '—'}</td>
-                        <td>{ext.type || '—'}</td>
+                        <td>{ext.secret ? 'â€¢â€¢â€¢â€¢' : 'â€”'}</td>
+                        <td>{ext.context || 'â€”'}</td>
+                        <td>{ext.host || 'â€”'}</td>
+                        <td>{ext.type || 'â€”'}</td>
                         <td>
                           {ext.registered === true ? (
                             <span className="superadmin-ext-registered" title="Extension is registered with Asterisk">Yes</span>
                           ) : ext.asterisk_state != null ? (
                             <span className="superadmin-ext-offline" title={`Asterisk state: ${ext.asterisk_state}`}>No</span>
                           ) : (
-                            <span className="superadmin-ext-unknown" title="ARI not configured or unreachable">—</span>
+                            <span className="superadmin-ext-unknown" title="ARI not configured or unreachable">â€”</span>
                           )}
                         </td>
-                        <td>{ext.created_at ? new Date(ext.created_at).toLocaleString() : '—'}</td>
+                        <td>{ext.created_at ? new Date(ext.created_at).toLocaleString() : 'â€”'}</td>
                         <td>
                           <button type="button" className="action-btn" onClick={() => openEditExtension(ext)}>
                             Edit
@@ -2800,7 +2804,7 @@ export default function SuperAdmin() {
                     <select name="tenant_id" className="superadmin-select" required>
                       {tenants.length === 0 && <option value="1">1 (add tenants in Tenants section)</option>}
                       {tenants.map((t) => (
-                        <option key={t.id} value={t.id}>{t.id} · {t.name}</option>
+                        <option key={t.id} value={t.id}>{t.id} Â· {t.name}</option>
                       ))}
                     </select>
                     <span className="superadmin-field-hint">Use the tenant (company) that will use this trunk. Assign the trunk to that tenant under Outbound.</span>
@@ -2855,7 +2859,7 @@ export default function SuperAdmin() {
               )}
               <ResourceTenantFilterDropdown viewKey="trunks" />
               {loading && trunks.length === 0 ? (
-                <p className="superadmin-loading">Loading trunks…</p>
+                <p className="superadmin-loading">Loading trunksâ€¦</p>
               ) : (
                 <div className="superadmin-table-wrap">
                   <table className="superadmin-table">
@@ -2869,7 +2873,7 @@ export default function SuperAdmin() {
                           <td>{getTenantLabel(t.tenant_id)}</td>
                           <td>{t.trunk_name}</td>
                           <td>{typeof t.config_json === 'string' ? 'plain text' : (t.config_json?.type || 'endpoint')}</td>
-                          <td>{t.created_at ? new Date(t.created_at).toLocaleString() : '—'}</td>
+                          <td>{t.created_at ? new Date(t.created_at).toLocaleString() : 'â€”'}</td>
                           <td>
                             <button type="button" className="action-btn" onClick={() => setEditingTrunk(t)}>Edit</button>
                             <button type="button" className="action-btn superadmin-delete-btn" onClick={() => handleDeleteTrunk(t)}>Delete</button>
@@ -2898,7 +2902,7 @@ export default function SuperAdmin() {
                     <select name="tenant_id" className="superadmin-select" required>
                       {tenants.length === 0 && <option value="1">1</option>}
                       {tenants.map((t) => (
-                        <option key={t.id} value={t.id}>{t.id} · {t.name}</option>
+                        <option key={t.id} value={t.id}>{t.id} Â· {t.name}</option>
                       ))}
                     </select>
                   </label>
@@ -2923,7 +2927,7 @@ export default function SuperAdmin() {
               )}
               <ResourceTenantFilterDropdown viewKey="campaigns" />
               {loading && campaigns.length === 0 ? (
-                <p className="superadmin-loading">Loading campaigns…</p>
+                <p className="superadmin-loading">Loading campaignsâ€¦</p>
               ) : (
                 <div className="superadmin-table-wrap">
                   <table className="superadmin-table">
@@ -2936,7 +2940,7 @@ export default function SuperAdmin() {
                           <td>{c.id}</td>
                           <td>{getTenantLabel(c.tenant_id)}</td>
                           <td>{c.name}</td>
-                          <td>{c.description ?? '—'}</td>
+                          <td>{c.description ?? 'â€”'}</td>
                           <td>
                             <button type="button" className="action-btn" onClick={() => setEditingCampaign(c)}>Edit</button>
                             <button type="button" className="action-btn superadmin-delete-btn" onClick={() => handleDeleteCampaign(c)}>Delete</button>
@@ -2962,7 +2966,7 @@ export default function SuperAdmin() {
                     <select name="tenant_id" className="superadmin-select" required onChange={(e) => setCreateInboundTenantId(e.target.value)}>
                       {tenants.length === 0 && <option value="1">1</option>}
                       {tenants.map((t) => (
-                        <option key={t.id} value={t.id}>{t.id} · {t.name}</option>
+                        <option key={t.id} value={t.id}>{t.id} Â· {t.name}</option>
                       ))}
                     </select>
                   </label>
@@ -2971,12 +2975,12 @@ export default function SuperAdmin() {
                   <label>
                     Campaign
                     <select name="campaign_id" className="superadmin-select" required>
-                      <option value="">— Select campaign —</option>
+                      <option value="">â€” Select campaign â€”</option>
                       {campaigns.filter((c) => !createInboundTenantId || String(c.tenant_id) === String(createInboundTenantId)).map((c) => (
                         <option key={c.id} value={c.id}>{c.name}</option>
                       ))}
                       {createInboundTenantId && campaigns.filter((c) => String(c.tenant_id) === String(createInboundTenantId)).length === 0 && (
-                        <option value="">No campaigns for this tenant — create one under Campaigns</option>
+                        <option value="">No campaigns for this tenant â€” create one under Campaigns</option>
                       )}
                     </select>
                     <span className="superadmin-field-hint">Every inbound number must be assigned to a campaign (for agent display).</span>
@@ -2997,7 +3001,7 @@ export default function SuperAdmin() {
                     <label>
                       Queue
                       <select name="destination_target" className="superadmin-select">
-                        <option value="">— Select queue —</option>
+                        <option value="">â€” Select queue â€”</option>
                         {queues.map((q) => (
                           <option key={q.id} value={q.id}>{q.name}</option>
                         ))}
@@ -3008,7 +3012,7 @@ export default function SuperAdmin() {
                     <label>
                       Extension
                       <select name="destination_target" className="superadmin-select">
-                        <option value="">— Select extension —</option>
+                        <option value="">â€” Select extension â€”</option>
                         {extensions.map((ext) => (
                           <option key={ext.id} value={ext.id}>{ext.name}</option>
                         ))}
@@ -3018,7 +3022,7 @@ export default function SuperAdmin() {
                   {inboundDestType === 'ivr' && (
                     <label>IVR
                       <select name="destination_target" className="superadmin-select">
-                        <option value="">— Select IVR —</option>
+                        <option value="">â€” Select IVR â€”</option>
                         {ivrMenus.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
                       </select>
                     </label>
@@ -3026,7 +3030,7 @@ export default function SuperAdmin() {
                   {inboundDestType === 'timecondition' && (
                     <label>Time Condition
                       <select name="destination_target" className="superadmin-select">
-                        <option value="">— Select —</option>
+                        <option value="">â€” Select â€”</option>
                         {timeConditions.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
                       </select>
                     </label>
@@ -3034,7 +3038,7 @@ export default function SuperAdmin() {
                   {inboundDestType === 'voicemail' && (
                     <label>Voicemail Box
                       <select name="destination_target" className="superadmin-select">
-                        <option value="">— Select —</option>
+                        <option value="">â€” Select â€”</option>
                         {voicemailBoxes.map((v) => <option key={v.id} value={v.id}>{v.mailbox}</option>)}
                       </select>
                     </label>
@@ -3042,7 +3046,7 @@ export default function SuperAdmin() {
                   {inboundDestType === 'announcement' && (
                     <label>Sound File
                       <select name="destination_target" className="superadmin-select">
-                        <option value="">— Select —</option>
+                        <option value="">â€” Select â€”</option>
                         {soundFiles.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
                       </select>
                     </label>
@@ -3061,7 +3065,7 @@ export default function SuperAdmin() {
                   <label>
                     Campaign
                     <select name="campaign_id" className="superadmin-select" required defaultValue={editingInbound.campaign_id ?? ''}>
-                      <option value="">— Select campaign —</option>
+                      <option value="">â€” Select campaign â€”</option>
                       {campaigns.filter((c) => String(c.tenant_id) === String(editingInbound.tenant_id)).map((c) => (
                         <option key={c.id} value={c.id}>{c.name}</option>
                       ))}
@@ -3083,7 +3087,7 @@ export default function SuperAdmin() {
                     <label>
                       Queue
                       <select name="destination_target" className="superadmin-select" defaultValue={editingInbound.destination_id ?? ''}>
-                        <option value="">— Select queue —</option>
+                        <option value="">â€” Select queue â€”</option>
                         {queues.map((q) => (
                           <option key={q.id} value={q.id}>{q.name}</option>
                         ))}
@@ -3094,7 +3098,7 @@ export default function SuperAdmin() {
                     <label>
                       Extension
                       <select name="destination_target" className="superadmin-select" defaultValue={editingInbound.destination_id ?? ''}>
-                        <option value="">— Select extension —</option>
+                        <option value="">â€” Select extension â€”</option>
                         {extensions.map((ext) => (
                           <option key={ext.id} value={ext.id}>{ext.name}</option>
                         ))}
@@ -3104,7 +3108,7 @@ export default function SuperAdmin() {
                   {inboundDestType === 'ivr' && (
                     <label>IVR
                       <select name="destination_target" className="superadmin-select" defaultValue={editingInbound.destination_id ?? ''}>
-                        <option value="">— Select IVR —</option>
+                        <option value="">â€” Select IVR â€”</option>
                         {ivrMenus.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
                       </select>
                     </label>
@@ -3112,7 +3116,7 @@ export default function SuperAdmin() {
                   {inboundDestType === 'timecondition' && (
                     <label>Time Condition
                       <select name="destination_target" className="superadmin-select" defaultValue={editingInbound.destination_id ?? ''}>
-                        <option value="">— Select —</option>
+                        <option value="">â€” Select â€”</option>
                         {timeConditions.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
                       </select>
                     </label>
@@ -3120,7 +3124,7 @@ export default function SuperAdmin() {
                   {inboundDestType === 'voicemail' && (
                     <label>Voicemail Box
                       <select name="destination_target" className="superadmin-select" defaultValue={editingInbound.destination_id ?? ''}>
-                        <option value="">— Select —</option>
+                        <option value="">â€” Select â€”</option>
                         {voicemailBoxes.map((v) => <option key={v.id} value={v.id}>{v.mailbox}</option>)}
                       </select>
                     </label>
@@ -3128,7 +3132,7 @@ export default function SuperAdmin() {
                   {inboundDestType === 'announcement' && (
                     <label>Sound File
                       <select name="destination_target" className="superadmin-select" defaultValue={editingInbound.destination_id ?? ''}>
-                        <option value="">— Select —</option>
+                        <option value="">â€” Select â€”</option>
                         {soundFiles.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
                       </select>
                     </label>
@@ -3141,7 +3145,7 @@ export default function SuperAdmin() {
               )}
               <ResourceTenantFilterDropdown viewKey="inbound" />
               {loading && inboundRoutes.length === 0 ? (
-                <p className="superadmin-loading">Loading inbound routes…</p>
+                <p className="superadmin-loading">Loading inbound routesâ€¦</p>
               ) : (
                 <div className="superadmin-table-wrap">
                   <table className="superadmin-table">
@@ -3155,7 +3159,7 @@ export default function SuperAdmin() {
                           <td>{getTenantLabel(r.tenant_id)}</td>
                           <td>{r.name}</td>
                           <td>{r.did}</td>
-                          <td>{r.campaign_name ?? '—'}</td>
+                          <td>{r.campaign_name ?? 'â€”'}</td>
                           <td>{getInboundDestinationLabel(r)}</td>
                           <td>
                             <button type="button" className="action-btn" onClick={() => setEditingInbound(r)}>Edit</button>
@@ -3176,7 +3180,7 @@ export default function SuperAdmin() {
               <p style={{ color: '#94a3b8', fontSize: '0.875rem', marginBottom: '1rem' }}>Set which SIP trunk agents use for outbound calls. If no route exists for a tenant, add one below.</p>
               <ResourceTenantFilterDropdown viewKey="outbound" />
               {loading && outboundRoutes.length === 0 && trunks.length === 0 ? (
-                <p className="superadmin-loading">Loading…</p>
+                <p className="superadmin-loading">Loadingâ€¦</p>
               ) : (
                 <>
                   <div className="superadmin-table-wrap">
@@ -3218,7 +3222,7 @@ export default function SuperAdmin() {
                     <select name="tenant_id" className="superadmin-select" required>
                       {tenants.length === 0 && <option value="1">1</option>}
                       {tenants.map((t) => (
-                        <option key={t.id} value={t.id}>{t.id} · {t.name}</option>
+                        <option key={t.id} value={t.id}>{t.id} Â· {t.name}</option>
                       ))}
                     </select>
                   </label>
@@ -3250,7 +3254,7 @@ export default function SuperAdmin() {
                     <select name="tenant_id" className="superadmin-select" required>
                       {tenants.length === 0 && <option value="1">1</option>}
                       {tenants.map((t) => (
-                        <option key={t.id} value={t.id}>{t.id} · {t.name}</option>
+                        <option key={t.id} value={t.id}>{t.id} Â· {t.name}</option>
                       ))}
                     </select>
                   </label>
@@ -3278,7 +3282,7 @@ export default function SuperAdmin() {
                   {createQueueFailoverType === 'queue' && (
                     <label>Queue
                       <select name="failover_destination_id" className="superadmin-select">
-                        <option value="">— Select queue —</option>
+                        <option value="">â€” Select queue â€”</option>
                         {queues.map((q) => (
                           <option key={q.id} value={q.id}>{q.name}</option>
                         ))}
@@ -3288,7 +3292,7 @@ export default function SuperAdmin() {
                   {createQueueFailoverType === 'extension' && (
                     <label>Extension
                       <select name="failover_destination_id" className="superadmin-select">
-                        <option value="">— Select extension —</option>
+                        <option value="">â€” Select extension â€”</option>
                         {extensions.map((e) => (
                           <option key={e.id} value={e.id}>{e.name}</option>
                         ))}
@@ -3298,7 +3302,7 @@ export default function SuperAdmin() {
                   {createQueueFailoverType === 'ivr' && (
                     <label>IVR
                       <select name="failover_destination_id" className="superadmin-select">
-                        <option value="">— Select IVR —</option>
+                        <option value="">â€” Select IVR â€”</option>
                         {ivrMenus.map((m) => (
                           <option key={m.id} value={m.id}>{m.name}</option>
                         ))}
@@ -3308,7 +3312,7 @@ export default function SuperAdmin() {
                   {createQueueFailoverType === 'timecondition' && (
                     <label>Time condition
                       <select name="failover_destination_id" className="superadmin-select">
-                        <option value="">— Select —</option>
+                        <option value="">â€” Select â€”</option>
                         {timeConditions.map((t) => (
                           <option key={t.id} value={t.id}>{t.name}</option>
                         ))}
@@ -3318,7 +3322,7 @@ export default function SuperAdmin() {
                   {createQueueFailoverType === 'voicemail' && (
                     <label>Voicemail
                       <select name="failover_destination_id" className="superadmin-select">
-                        <option value="">— Select —</option>
+                        <option value="">â€” Select â€”</option>
                         {voicemailBoxes.map((v) => (
                           <option key={v.id} value={v.id}>{v.mailbox}</option>
                         ))}
@@ -3328,7 +3332,7 @@ export default function SuperAdmin() {
                   {createQueueFailoverType === 'announcement' && (
                     <label>Announcement (sound)
                       <select name="failover_destination_id" className="superadmin-select">
-                        <option value="">— Select —</option>
+                        <option value="">â€” Select â€”</option>
                         {soundFiles.map((s) => (
                           <option key={s.id} value={s.id}>{s.name}</option>
                         ))}
@@ -3368,7 +3372,7 @@ export default function SuperAdmin() {
                   {editingQueueFailoverType === 'queue' && (
                     <label>Queue
                       <select name="failover_destination_id" className="superadmin-select" defaultValue={editingQueue.failover_destination_id ?? ''}>
-                        <option value="">— Select queue —</option>
+                        <option value="">â€” Select queue â€”</option>
                         {queues.map((q) => (
                           <option key={q.id} value={q.id}>{q.name}</option>
                         ))}
@@ -3378,7 +3382,7 @@ export default function SuperAdmin() {
                   {editingQueueFailoverType === 'extension' && (
                     <label>Extension
                       <select name="failover_destination_id" className="superadmin-select" defaultValue={editingQueue.failover_destination_id ?? ''}>
-                        <option value="">— Select extension —</option>
+                        <option value="">â€” Select extension â€”</option>
                         {extensions.map((e) => (
                           <option key={e.id} value={e.id}>{e.name}</option>
                         ))}
@@ -3388,7 +3392,7 @@ export default function SuperAdmin() {
                   {editingQueueFailoverType === 'ivr' && (
                     <label>IVR
                       <select name="failover_destination_id" className="superadmin-select" defaultValue={editingQueue.failover_destination_id ?? ''}>
-                        <option value="">— Select IVR —</option>
+                        <option value="">â€” Select IVR â€”</option>
                         {ivrMenus.map((m) => (
                           <option key={m.id} value={m.id}>{m.name}</option>
                         ))}
@@ -3398,7 +3402,7 @@ export default function SuperAdmin() {
                   {editingQueueFailoverType === 'timecondition' && (
                     <label>Time condition
                       <select name="failover_destination_id" className="superadmin-select" defaultValue={editingQueue.failover_destination_id ?? ''}>
-                        <option value="">— Select —</option>
+                        <option value="">â€” Select â€”</option>
                         {timeConditions.map((t) => (
                           <option key={t.id} value={t.id}>{t.name}</option>
                         ))}
@@ -3408,7 +3412,7 @@ export default function SuperAdmin() {
                   {editingQueueFailoverType === 'voicemail' && (
                     <label>Voicemail
                       <select name="failover_destination_id" className="superadmin-select" defaultValue={editingQueue.failover_destination_id ?? ''}>
-                        <option value="">— Select —</option>
+                        <option value="">â€” Select â€”</option>
                         {voicemailBoxes.map((v) => (
                           <option key={v.id} value={v.id}>{v.mailbox}</option>
                         ))}
@@ -3418,7 +3422,7 @@ export default function SuperAdmin() {
                   {editingQueueFailoverType === 'announcement' && (
                     <label>Announcement (sound)
                       <select name="failover_destination_id" className="superadmin-select" defaultValue={editingQueue.failover_destination_id ?? ''}>
-                        <option value="">— Select —</option>
+                        <option value="">â€” Select â€”</option>
                         {soundFiles.map((s) => (
                           <option key={s.id} value={s.id}>{s.name}</option>
                         ))}
@@ -3433,7 +3437,7 @@ export default function SuperAdmin() {
               )}
               <ResourceTenantFilterDropdown viewKey="queues" />
               {loading && queues.length === 0 ? (
-                <p className="superadmin-loading">Loading queues…</p>
+                <p className="superadmin-loading">Loading queuesâ€¦</p>
               ) : (
                 <div className="superadmin-table-wrap">
                   <table className="superadmin-table">
@@ -3446,9 +3450,9 @@ export default function SuperAdmin() {
                           <td>{q.id}</td>
                           <td>{getTenantLabel(q.tenant_id)}</td>
                           <td>{q.name}</td>
-                          <td>{q.display_name || '—'}</td>
-                          <td>{q.strategy || '—'}</td>
-                          <td>{q.timeout ?? '—'}</td>
+                          <td>{q.display_name || 'â€”'}</td>
+                          <td>{q.strategy || 'â€”'}</td>
+                          <td>{q.timeout ?? 'â€”'}</td>
                           <td>
                             <button type="button" className="action-btn" onClick={() => { setSelectedQueueId(selectedQueueId === q.id ? null : q.id); setEditingQueue(null); }}>{selectedQueueId === q.id ? 'Hide members' : 'Members'}</button>
                             <button type="button" className="action-btn" onClick={() => { setEditingQueue(q); setSelectedQueueId(null); }}>Edit</button>
@@ -3467,7 +3471,7 @@ export default function SuperAdmin() {
                     <label>
                       Add agent
                       <select value={newMemberName} onChange={(e) => setNewMemberName(e.target.value)} className="superadmin-select">
-                        <option value="">— Select agent —</option>
+                        <option value="">â€” Select agent â€”</option>
                         {agentUsers
                           .filter((a) => !queueMembers.some((m) => m.member_name === a.phone_login_number))
                           .map((a) => (
@@ -3490,7 +3494,7 @@ export default function SuperAdmin() {
                         <tbody>
                           {queueMembers.map((m) => (
                             <tr key={m.member_name}>
-                              <td>{m.agent_name || '—'}</td>
+                              <td>{m.agent_name || 'â€”'}</td>
                               <td>{m.agent_id || m.member_name}</td>
                               <td>
                                 <button type="button" className="action-btn superadmin-delete-btn" style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }} onClick={() => handleRemoveQueueMember(selectedQueueId, m.member_name)}>Remove</button>
@@ -3517,7 +3521,7 @@ export default function SuperAdmin() {
                     <label>Tenant
                       <select name="tenant_id" className="superadmin-select" required>
                         {tenants.length === 0 && <option value="1">1</option>}
-                        {tenants.map(t => <option key={t.id} value={t.id}>{t.id} · {t.name}</option>)}
+                        {tenants.map(t => <option key={t.id} value={t.id}>{t.id} Â· {t.name}</option>)}
                       </select>
                     </label>
                   )}
@@ -3570,7 +3574,7 @@ export default function SuperAdmin() {
                 </form>
               )}
               {loading && ivrMenus.length === 0 ? (
-                <p className="superadmin-loading">Loading IVR menus…</p>
+                <p className="superadmin-loading">Loading IVR menusâ€¦</p>
               ) : (
                 <div className="superadmin-table-wrap">
                   <table className="superadmin-table">
@@ -3584,7 +3588,7 @@ export default function SuperAdmin() {
                           <td>{getTenantLabel(m.tenant_id)}</td>
                           <td>{m.name}</td>
                           <td>{m.config_json?.type || 'dtmf'}</td>
-                          <td>{(m.options || []).map(o => o.dtmf_key).join(', ') || '—'}</td>
+                          <td>{(m.options || []).map(o => o.dtmf_key).join(', ') || 'â€”'}</td>
                           <td>
                             <button type="button" className="action-btn" onClick={() => { setEditingIvr(m); setShowCreateIvr(false); setIvrOptions(m.options || []); }}>Edit</button>
                             <button type="button" className="action-btn superadmin-delete-btn" onClick={() => handleDeleteIvr(m)}>Delete</button>
@@ -3610,7 +3614,7 @@ export default function SuperAdmin() {
                   <label>Tenant
                     <select name="tenant_id" className="superadmin-select" required>
                       {tenants.length === 0 && <option value="1">1</option>}
-                      {tenants.map(t => <option key={t.id} value={t.id}>{t.id} · {t.name}</option>)}
+                      {tenants.map(t => <option key={t.id} value={t.id}>{t.id} Â· {t.name}</option>)}
                     </select>
                   </label>
                   <label>Group name <input name="group_name" type="text" required placeholder="e.g. Business Hours" /></label>
@@ -3646,7 +3650,7 @@ export default function SuperAdmin() {
                         <td>{g.id}</td>
                         <td>{getTenantLabel(g.tenant_id)}</td>
                         <td>{g.name}</td>
-                        <td>{(g.rules || []).map(r => `${r.day_of_week != null ? DAY_NAMES[r.day_of_week] : 'Any'} ${r.start_time || ''}-${r.end_time || ''}`).join('; ') || '—'}</td>
+                        <td>{(g.rules || []).map(r => `${r.day_of_week != null ? DAY_NAMES[r.day_of_week] : 'Any'} ${r.start_time || ''}-${r.end_time || ''}`).join('; ') || 'â€”'}</td>
                         <td><button type="button" className="action-btn superadmin-delete-btn" onClick={() => handleDeleteTimeGroup(g)}>Delete</button></td>
                       </tr>
                     ))}
@@ -3662,7 +3666,7 @@ export default function SuperAdmin() {
                   <label>Tenant
                     <select name="tenant_id" className="superadmin-select" required>
                       {tenants.length === 0 && <option value="1">1</option>}
-                      {tenants.map(t => <option key={t.id} value={t.id}>{t.id} · {t.name}</option>)}
+                      {tenants.map(t => <option key={t.id} value={t.id}>{t.id} Â· {t.name}</option>)}
                     </select>
                   </label>
                   <label>Name <input name="tc_name" type="text" required placeholder="e.g. Office Hours" /></label>
@@ -3680,7 +3684,7 @@ export default function SuperAdmin() {
                   <label>Match destination
                     {createTcMatchType && createTcMatchType !== 'hangup' ? (
                       <select name="match_dest_id" className="superadmin-select">
-                        <option value="">— Select —</option>
+                        <option value="">â€” Select â€”</option>
                         {getDestTargetOptions(createTcMatchType).map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                       </select>
                     ) : (
@@ -3695,7 +3699,7 @@ export default function SuperAdmin() {
                   <label>No-match destination
                     {createTcNomatchType && createTcNomatchType !== 'hangup' ? (
                       <select name="nomatch_dest_id" className="superadmin-select">
-                        <option value="">— Select —</option>
+                        <option value="">â€” Select â€”</option>
                         {getDestTargetOptions(createTcNomatchType).map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                       </select>
                     ) : (
@@ -3717,7 +3721,7 @@ export default function SuperAdmin() {
                         <td>{tc.id}</td>
                         <td>{getTenantLabel(tc.tenant_id)}</td>
                         <td>{tc.name}</td>
-                        <td>{tc.time_group_name || (tc.time_group_id ? `#${tc.time_group_id}` : '—')}</td>
+                        <td>{tc.time_group_name || (tc.time_group_id ? `#${tc.time_group_id}` : 'â€”')}</td>
                         <td>{tc.match_destination_type || 'hangup'}{tc.match_destination_id ? ` #${tc.match_destination_id}` : ''}</td>
                         <td>{tc.nomatch_destination_type || 'hangup'}{tc.nomatch_destination_id ? ` #${tc.nomatch_destination_id}` : ''}</td>
                         <td><button type="button" className="action-btn superadmin-delete-btn" onClick={() => handleDeleteTimeCond(tc)}>Delete</button></td>
@@ -3743,7 +3747,7 @@ export default function SuperAdmin() {
                   <label>Tenant
                     <select name="tenant_id" className="superadmin-select" required>
                       {tenants.length === 0 && <option value="1">1</option>}
-                      {tenants.map(t => <option key={t.id} value={t.id}>{t.id} · {t.name}</option>)}
+                      {tenants.map(t => <option key={t.id} value={t.id}>{t.id} Â· {t.name}</option>)}
                     </select>
                   </label>
                   <label>Name <input name="sound_name" type="text" required placeholder="e.g. Welcome Greeting" /></label>
@@ -3755,7 +3759,7 @@ export default function SuperAdmin() {
                 </form>
               )}
               {loading && soundFiles.length === 0 ? (
-                <p className="superadmin-loading">Loading sound files…</p>
+                <p className="superadmin-loading">Loading sound filesâ€¦</p>
               ) : (
                 <div className="superadmin-table-wrap">
                   <table className="superadmin-table">
@@ -3788,7 +3792,7 @@ export default function SuperAdmin() {
                     <label>Tenant
                       <select name="tenant_id" className="superadmin-select" required>
                         {tenants.length === 0 && <option value="1">1</option>}
-                        {tenants.map(t => <option key={t.id} value={t.id}>{t.id} · {t.name}</option>)}
+                        {tenants.map(t => <option key={t.id} value={t.id}>{t.id} Â· {t.name}</option>)}
                       </select>
                     </label>
                   )}
@@ -3809,7 +3813,7 @@ export default function SuperAdmin() {
                 </form>
               )}
               {loading && voicemailBoxes.length === 0 ? (
-                <p className="superadmin-loading">Loading voicemail boxes…</p>
+                <p className="superadmin-loading">Loading voicemail boxesâ€¦</p>
               ) : (
                 <div className="superadmin-table-wrap">
                   <table className="superadmin-table">
@@ -3820,7 +3824,7 @@ export default function SuperAdmin() {
                           <td>{v.id}</td>
                           <td>{getTenantLabel(v.tenant_id)}</td>
                           <td>{v.mailbox}</td>
-                          <td>{v.email || '—'}</td>
+                          <td>{v.email || 'â€”'}</td>
                           <td>{v.config_json?.max_duration || 120}s</td>
                           <td>
                             <button type="button" className="action-btn" onClick={() => { setEditingVoicemail(v); setShowCreateVoicemail(false); }}>Edit</button>
@@ -3850,7 +3854,7 @@ export default function SuperAdmin() {
                     >
                       <option value="">All</option>
                       {tenants.map((t) => (
-                        <option key={t.id} value={t.id}>{t.id} · {t.name}</option>
+                        <option key={t.id} value={t.id}>{t.id} Â· {t.name}</option>
                       ))}
                     </select>
                   </label>
@@ -3867,12 +3871,12 @@ export default function SuperAdmin() {
                   style={{ width: '12rem' }}
                 />
                 <button type="button" className="action-btn" onClick={handleBlacklistAdd} disabled={blacklistAddLoading || !blacklistAddNumber.trim()}>
-                  {blacklistAddLoading ? '…' : 'Add'}
+                  {blacklistAddLoading ? 'â€¦' : 'Add'}
                 </button>
               </div>
               {blacklistError && <p className="dashboard-error">{blacklistError}</p>}
               {blacklistLoading ? (
-                <p className="superadmin-loading">Loading…</p>
+                <p className="superadmin-loading">Loadingâ€¦</p>
               ) : (
                 <div className="superadmin-table-wrap">
                   <table className="superadmin-table">
@@ -3883,10 +3887,10 @@ export default function SuperAdmin() {
                         <tr key={e.id}>
                           <td>{e.number}</td>
                           <td>{getTenantLabel(e.tenant_id)}</td>
-                          <td>{e.created_at || '—'}</td>
+                          <td>{e.created_at || 'â€”'}</td>
                           <td>
                             <button type="button" className="action-btn superadmin-delete-btn" disabled={blacklistDeleteLoading === e.id} onClick={() => handleBlacklistDelete(e.id)}>
-                              {blacklistDeleteLoading === e.id ? '…' : 'Remove'}
+                              {blacklistDeleteLoading === e.id ? 'â€¦' : 'Remove'}
                             </button>
                           </td>
                         </tr>
@@ -3923,7 +3927,7 @@ export default function SuperAdmin() {
                 <button type="button" className="superadmin-add-btn cdr-refresh-btn" onClick={loadDidTfnReport} disabled={didTfnLoading}>Refresh</button>
                 <button type="button" className="superadmin-add-btn cdr-download-btn" onClick={downloadDidTfnReport}>Download CSV</button>
               </div>
-              {didTfnLoading && <p className="superadmin-loading">Loading report…</p>}
+              {didTfnLoading && <p className="superadmin-loading">Loading reportâ€¦</p>}
               <div className="cdr-table-wrap">
                 <table className="superadmin-table cdr-table">
                   <thead>
@@ -3942,7 +3946,7 @@ export default function SuperAdmin() {
                     )}
                     {didTfnReport.map((row, i) => (
                       <tr key={i}>
-                        <td>{row.did_tfn || '—'}</td>
+                        <td>{row.did_tfn || 'â€”'}</td>
                         <td>{row.total_calls ?? 0}</td>
                         <td>{row.answered ?? 0}</td>
                         <td>{row.abandoned ?? 0}</td>
@@ -4018,843 +4022,5 @@ export default function SuperAdmin() {
       </div>
     </div>
   </Layout>
-  );
-}
-
-function AsteriskLogsView() {
-  const [config, setConfig] = useState({ configured: false, source: null, message: '' });
-  const [logFile, setLogFile] = useState('full');
-  const [tailLines, setTailLines] = useState(2000);
-  const [lines, setLines] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [live, setLive] = useState(false);
-  const [error, setError] = useState('');
-  const logEndRef = useRef(null);
-  const eventSourceRef = useRef(null);
-
-  const loadConfig = useCallback(async () => {
-    try {
-      const res = await apiFetch('/api/superadmin/asterisk-logs/config');
-      const data = await res.json().catch(() => ({}));
-      if (res.ok && data.success) {
-        setConfig({
-          configured: data.configured,
-          source: data.source,
-          message: data.message || '',
-        });
-      }
-    } catch { setConfig({ configured: false, source: null, message: '' }); }
-  }, []);
-
-  const loadLogs = useCallback(async () => {
-    setError('');
-    setLoading(true);
-    try {
-      const res = await apiFetch(`/api/superadmin/asterisk-logs?file=${encodeURIComponent(logFile)}&tail=${tailLines}`);
-      const data = await res.json().catch(() => ({}));
-      if (res.ok && data.success) {
-        setLines(data.lines || []);
-      } else {
-        setError(data.error || 'Failed to load logs');
-      }
-    } catch (e) {
-      setError(e.message || 'Failed to load logs');
-    } finally {
-      setLoading(false);
-    }
-  }, [logFile, tailLines]);
-
-  useEffect(() => {
-    loadConfig();
-  }, [loadConfig]);
-
-  useEffect(() => {
-    if (!live) return;
-    setError('');
-    const url = `${API_BASE}/api/superadmin/asterisk-logs/stream?file=${encodeURIComponent(logFile)}`;
-    const es = new EventSource(url, { withCredentials: true });
-    eventSourceRef.current = es;
-    es.onmessage = (ev) => {
-      const line = ev.data;
-      if (line) setLines((prev) => [...prev.slice(-9999), line]);
-    };
-    es.onerror = () => {
-      es.close();
-      setLive(false);
-    };
-    return () => {
-      es.close();
-      eventSourceRef.current = null;
-    };
-  }, [live, logFile]);
-
-  useEffect(() => {
-    if (live) return;
-    eventSourceRef.current?.close();
-    eventSourceRef.current = null;
-  }, [live]);
-
-  useEffect(() => {
-    logEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [lines]);
-
-  return (
-    <section className="dashboard-section">
-      <h2 className="superadmin-section-title">Asterisk Logs</h2>
-      <p style={{ color: '#94a3b8', fontSize: '0.875rem', marginBottom: '1rem' }}>
-        View Asterisk log files without logging into the server. Same server: set ASTERISK_LOG_DIR. Remote: set ASTERISK_CONFIG_API_URL and run config-receiver on the Asterisk server.
-      </p>
-      {config.message && (
-        <p style={{ color: '#94a3b8', fontSize: '0.8rem', marginBottom: '1rem' }}>
-          {config.message}
-        </p>
-      )}
-      {!config.configured && (
-        <p style={{ color: '#f59e0b', marginBottom: '1rem' }}>
-          Logs not configured. Set ASTERISK_LOG_DIR (same server) or ASTERISK_CONFIG_API_URL (remote) in .env.
-        </p>
-      )}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', alignItems: 'center', marginBottom: '1rem' }}>
-        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <span style={{ color: '#94a3b8' }}>Log file:</span>
-          <select
-            value={logFile}
-            onChange={(e) => setLogFile(e.target.value)}
-            disabled={live}
-            className="superadmin-select"
-            style={{ minWidth: '120px' }}
-          >
-            <option value="full">full</option>
-            <option value="messages">messages</option>
-            <option value="queue_log">queue_log</option>
-          </select>
-        </label>
-        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <span style={{ color: '#94a3b8' }}>Lines:</span>
-          <input
-            type="number"
-            min={100}
-            max={50000}
-            value={tailLines}
-            onChange={(e) => setTailLines(parseInt(e.target.value, 10) || 2000)}
-            disabled={live}
-            className="superadmin-input"
-            style={{ width: '90px' }}
-          />
-        </label>
-        <button
-          type="button"
-          onClick={loadLogs}
-          disabled={loading || live || !config.configured}
-          className="superadmin-btn primary"
-        >
-          {loading ? 'Loading…' : 'Load'}
-        </button>
-        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginLeft: '0.5rem' }}>
-          <input
-            type="checkbox"
-            checked={live}
-            onChange={(e) => setLive(e.target.checked)}
-            disabled={!config.configured}
-          />
-          <span style={{ color: '#94a3b8' }}>Live</span>
-        </label>
-      </div>
-      {error && <p style={{ color: '#ef4444', marginBottom: '0.5rem' }}>{error}</p>}
-      <div
-        style={{
-          background: '#0f172a',
-          border: '1px solid #334155',
-          borderRadius: '6px',
-          padding: '0.75rem',
-          maxHeight: '70vh',
-          overflow: 'auto',
-          fontFamily: 'ui-monospace, monospace',
-          fontSize: '0.8rem',
-          lineHeight: 1.4,
-          whiteSpace: 'pre-wrap',
-          wordBreak: 'break-all',
-        }}
-      >
-        {lines.length === 0 && !loading && !live && config.configured && (
-          <span style={{ color: '#64748b' }}>Click Load to fetch log lines.</span>
-        )}
-        {lines.map((line, i) => (
-          <div key={i}>{line}</div>
-        ))}
-        <div ref={logEndRef} />
-      </div>
-    </section>
-  );
-}
-
-function RolePermissionsView() {
-  const [roleModules, setRoleModules] = useState({});
-  const [modules, setModules] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(null);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await apiFetch('/api/superadmin/role-modules');
-      const data = await res.json().catch(() => ({}));
-      if (res.ok && data.success) {
-        setRoleModules(data.role_modules || {});
-        setModules(data.modules || []);
-      }
-    } catch { /* ignore */ }
-    finally { setLoading(false); }
-  }, []);
-
-  useEffect(() => { load(); }, [load]);
-
-  const toggle = async (roleId, moduleKey, currentValue) => {
-    const key = `${roleId}_${moduleKey}`;
-    setSaving(key);
-    try {
-      const res = await apiFetch('/api/superadmin/role-modules', {
-        method: 'PUT',
-        body: JSON.stringify({ role: roleId, module_key: moduleKey, enabled: !currentValue }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (res.ok && data.success) {
-        setRoleModules(prev => ({
-          ...prev,
-          [roleId]: { ...(prev[roleId] || {}), [moduleKey]: !currentValue },
-        }));
-      }
-    } catch { /* ignore */ }
-    finally { setSaving(null); }
-  };
-
-  const groups = useMemo(() => {
-    const map = {};
-    for (const m of modules) {
-      if (!map[m.group]) map[m.group] = [];
-      map[m.group].push(m);
-    }
-    return Object.entries(map);
-  }, [modules]);
-
-  if (loading) return <p className="superadmin-loading">Loading role permissions…</p>;
-
-  return (
-    <section className="dashboard-section">
-      <h2 className="superadmin-section-title">Role Permissions</h2>
-      <p style={{ color: '#94a3b8', fontSize: '0.875rem', marginBottom: '1.5rem' }}>
-        Enable or disable modules for each role. SuperAdmin always has full access. Changes take effect on next login.
-      </p>
-      {groups.map(([groupName, mods]) => (
-        <div key={groupName} style={{ marginBottom: '2rem' }}>
-          <h3 style={{ color: '#e2e8f0', fontSize: '1rem', marginBottom: '0.75rem', borderBottom: '1px solid #334155', paddingBottom: '0.5rem' }}>
-            {groupName}
-          </h3>
-          <div className="superadmin-table-wrap">
-            <table className="superadmin-table">
-              <thead>
-                <tr>
-                  <th style={{ minWidth: '200px' }}>Module</th>
-                  {MANAGEABLE_ROLES.map(r => (
-                    <th key={r} style={{ textAlign: 'center', minWidth: '100px' }}>{ROLE_LABEL[r]}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {mods.map(mod => (
-                  <tr key={mod.key}>
-                    <td>{mod.label}</td>
-                    {MANAGEABLE_ROLES.map(roleId => {
-                      const enabled = !!(roleModules[roleId] || {})[mod.key];
-                      const isSaving = saving === `${roleId}_${mod.key}`;
-                      return (
-                        <td key={roleId} style={{ textAlign: 'center' }}>
-                          <button
-                            type="button"
-                            onClick={() => toggle(roleId, mod.key, enabled)}
-                            disabled={!!isSaving}
-                            className={`role-perm-toggle ${enabled ? 'enabled' : 'disabled'}`}
-                            title={enabled ? 'Click to disable' : 'Click to enable'}
-                          >
-                            {isSaving ? '…' : (enabled ? 'ON' : 'OFF')}
-                          </button>
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      ))}
-    </section>
-  );
-}
-
-function CDRView({
-  list, total, page, totalPages, loading, tableMissing, error,
-  from, to, agent, queue, direction, status,
-  onFromChange, onToChange, onAgentChange, onQueueChange, onDirectionChange, onStatusChange,
-  onPageChange, onRefresh, onDownload,
-  playingRecordingId, recordingAudioUrl, onPlayRecording, onStopRecording,
-}) {
-  const audioRef = useRef(null);
-  useEffect(() => {
-    if (recordingAudioUrl && audioRef.current) {
-      audioRef.current.src = recordingAudioUrl;
-      audioRef.current.play().catch(() => {});
-    }
-  }, [recordingAudioUrl]);
-
-  const formatDt = (v) => (v ? new Date(v).toLocaleString() : '—');
-  const formatSec = (s) => (s != null && s >= 0 ? `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}` : '—');
-
-  return (
-    <>
-      <h2 className="superadmin-section-title">CDR & Recordings</h2>
-      {tableMissing ? (
-        <div className="cdr-empty-state cdr-empty-state--error">
-          <p><strong>Call records table is missing.</strong></p>
-          <p>Run this migration on your MySQL database: <code>docs/migrations/002_phase3_call_records_realtime.sql</code></p>
-          <p>Example: <code>mysql -u root -p pbx_callcentre &lt; docs/migrations/002_phase3_call_records_realtime.sql</code></p>
-        </div>
-      ) : (
-        <>
-          <p className="superadmin-sync-message">
-            Call detail records and playback. Set RECORDINGS_BASE_PATH (or ASTERISK_RECORDING_PATH) on the server so recordings can be streamed.
-          </p>
-          {error && (
-            <div className="cdr-empty-state cdr-empty-state--error">
-              <p><strong>CDR load failed:</strong> {error}</p>
-            </div>
-          )}
-        </>
-      )}
-
-      <div className="cdr-filters">
-        <label className="cdr-filter-label">
-          From
-          <input type="date" className="cdr-input" value={from} onChange={(e) => onFromChange(e.target.value)} />
-        </label>
-        <label className="cdr-filter-label">
-          To
-          <input type="date" className="cdr-input" value={to} onChange={(e) => onToChange(e.target.value)} />
-        </label>
-        <label className="cdr-filter-label">
-          Agent
-          <input type="text" className="cdr-input" placeholder="Extension or name" value={agent} onChange={(e) => onAgentChange(e.target.value)} />
-        </label>
-        <label className="cdr-filter-label">
-          Queue
-          <input type="text" className="cdr-input" placeholder="Queue name" value={queue} onChange={(e) => onQueueChange(e.target.value)} />
-        </label>
-        <label className="cdr-filter-label">
-          Direction
-          <select className="superadmin-select cdr-select" value={direction} onChange={(e) => onDirectionChange(e.target.value)}>
-            <option value="">All</option>
-            <option value="inbound">Inbound</option>
-            <option value="outbound">Outbound</option>
-          </select>
-        </label>
-        <label className="cdr-filter-label">
-          Status
-          <select className="superadmin-select cdr-select" value={status} onChange={(e) => onStatusChange(e.target.value)}>
-            <option value="">All</option>
-            <option value="answered">Answered</option>
-            <option value="abandoned">Abandoned</option>
-            <option value="transferred">Transferred</option>
-            <option value="failed">Failed</option>
-          </select>
-        </label>
-        <button type="button" className="superadmin-add-btn cdr-refresh-btn" onClick={() => onRefresh(1)}>Search</button>
-        <button type="button" className="superadmin-add-btn cdr-download-btn" onClick={onDownload}>Download CDR</button>
-      </div>
-
-      {recordingAudioUrl && (
-        <div className="cdr-audio-bar">
-          <audio ref={audioRef} controls onEnded={onStopRecording} />
-          <button type="button" className="cdr-stop-btn" onClick={onStopRecording}>Stop</button>
-        </div>
-      )}
-
-      {loading && <p className="superadmin-loading">Loading CDR…</p>}
-      <div className="cdr-table-wrap">
-        <table className="superadmin-table cdr-table">
-          <thead>
-            <tr>
-              <th>Start</th>
-              <th>Caller</th>
-              <th>Destination</th>
-              <th>DID/TFN</th>
-              <th>Agent</th>
-              <th>Queue</th>
-              <th>Direction</th>
-              <th>Duration</th>
-              <th>Talk</th>
-              <th>Wait</th>
-              <th>Status</th>
-              <th>Details</th>
-              <th>Recording</th>
-            </tr>
-          </thead>
-          <tbody>
-            {!loading && list.length === 0 && !tableMissing && (
-              <tr>
-                <td colSpan={13} className="cdr-empty">
-                  <span className="cdr-empty-title">No call records yet.</span>
-                  <span className="cdr-empty-hint">Records are created when: (1) inbound/queue calls use the Stasis app or when the dialplan calls the app&apos;s IncomingCall URL, or (2) agents make outbound calls from the console.</span>
-                </td>
-              </tr>
-            )}
-            {list.map((row) => {
-              const statusCls = row.status === 'abandoned' ? 'cdr-status-abandoned' :
-                row.transfer_status === 1 ? 'cdr-status-transferred' :
-                row.status === 'failed' ? 'cdr-status-failed' : '';
-              const details = row.transfer_status === 1
-                ? `Transfer: ${row.transfer_from || '?'} → ${row.transfer_to || '?'}${row.transfer_type ? ` (${row.transfer_type})` : ''}`
-                : row.abandon_reason
-                  ? `Abandon: ${row.abandon_reason}${row.failover_destination ? ` → ${row.failover_destination}` : ''}`
-                  : '—';
-              return (
-                <tr key={row.unique_id || row.id} className={statusCls}>
-                  <td>{formatDt(row.start_time)}</td>
-                  <td>{row.source_number || '—'}</td>
-                  <td>{row.destination_number || '—'}</td>
-                  <td>{row.did_tfn || '—'}</td>
-                  <td>{row.agent_name}</td>
-                  <td>{row.queue_name || '—'}</td>
-                  <td>{row.direction || '—'}</td>
-                  <td>{formatSec(row.duration_sec)}</td>
-                  <td>{formatSec(row.talk_sec)}</td>
-                  <td>{formatSec(row.wait_time_sec)}</td>
-                  <td>{row.status || '—'}</td>
-                  <td className="cdr-details" title={details}>{details}</td>
-                  <td>
-                    {row.has_recording ? (
-                      <button
-                        type="button"
-                        className={`cdr-play-btn ${playingRecordingId === row.unique_id ? 'cdr-playing' : ''}`}
-                        onClick={() => onPlayRecording(row.unique_id)}
-                      >
-                        {playingRecordingId === row.unique_id ? 'Stop' : 'Play'}
-                      </button>
-                    ) : (
-                      '—'
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-      <div className="cdr-pagination">
-        <span className="cdr-pagination-info">
-          {total} call(s) · page {page} of {totalPages}
-        </span>
-        <div className="cdr-pagination-btns">
-          <button type="button" className="superadmin-add-btn cdr-page-btn" disabled={page <= 1} onClick={() => onPageChange(page - 1)}>Prev</button>
-          <button type="button" className="superadmin-add-btn cdr-page-btn" disabled={page >= totalPages} onClick={() => onPageChange(page + 1)}>Next</button>
-        </div>
-      </div>
-    </>
-  );
-}
-
-function getAgentStatusDisplay(status, breakName) {
-  const s = (status || '').toUpperCase();
-  if (s === 'RINGING') return { label: 'Ringing', cls: 'la-status-ringing' };
-  if (s === 'ON CALL' || s === 'ONCALL') return { label: 'On Call', cls: 'la-status-oncall' };
-  if (s === 'OUTBOUND') return { label: 'Outbound', cls: 'la-status-oncall' };
-  if (s.includes('BREAK') || s === 'PAUSED' || (breakName != null && breakName !== ''))
-    return { label: breakName ? `Break (${breakName})` : 'Break', cls: 'la-status-break' };
-  if (s === 'LOGGEDIN' || s === 'SIP PHONE RINGING' || s === 'LOGININITIATED')
-    return { label: 'Available', cls: 'la-status-available' };
-  if (s === 'LOGGEDOUT' || s === 'LOGINFAILED')
-    return { label: 'Logged Out', cls: 'la-status-loggedout' };
-  if (s === 'DISABLED')
-    return { label: 'Disabled', cls: 'la-status-loggedout' };
-  return { label: status || 'Unknown', cls: 'la-status-unknown' };
-}
-
-
-function LiveAgentDuration({ sessionStartedAt }) {
-  const [elapsed, setElapsed] = useState(() =>
-    sessionStartedAt ? Date.now() - new Date(sessionStartedAt).getTime() : 0
-  );
-  const ref = useRef(null);
-  useEffect(() => {
-    if (!sessionStartedAt) { setElapsed(0); return; }
-    const tick = () => setElapsed(Date.now() - new Date(sessionStartedAt).getTime());
-    tick();
-    ref.current = setInterval(tick, 1000);
-    return () => clearInterval(ref.current);
-  }, [sessionStartedAt]);
-  return <span>{formatDurationVerbose(elapsed)}</span>;
-}
-
-function LiveBreakDuration({ breakStartedAt }) {
-  const [elapsed, setElapsed] = useState(() =>
-    breakStartedAt ? Date.now() - new Date(breakStartedAt).getTime() : 0
-  );
-  const ref = useRef(null);
-  useEffect(() => {
-    if (!breakStartedAt) { setElapsed(0); return; }
-    const tick = () => setElapsed(Date.now() - new Date(breakStartedAt).getTime());
-    tick();
-    ref.current = setInterval(tick, 1000);
-    return () => clearInterval(ref.current);
-  }, [breakStartedAt]);
-  return <span>{formatDurationVerbose(elapsed)}</span>;
-}
-
-
-function LiveAgentsView({
-  agents, stats, tenants, tenantId, onTenantChange,
-  search, onSearchChange, statusFilter, onStatusFilterChange,
-  supervisorExtension, onSupervisorExtensionChange, onMonitor,
-  apiBase = '/api/superadmin',
-  onRefresh,
-}) {
-  const [monitorLoading, setMonitorLoading] = useState(null);
-  const [monitorError, setMonitorError] = useState('');
-  const [forceLoading, setForceLoading] = useState(null);
-  const [forceError, setForceError] = useState('');
-
-  const filtered = useMemo(() => {
-    let list = agents || [];
-    if (statusFilter && statusFilter !== 'all') {
-      list = list.filter((a) => {
-        const s = (a.status || '').toUpperCase();
-        switch (statusFilter) {
-          case 'available':
-            return s === 'LOGGEDIN' || s === 'SIP PHONE RINGING' || s === 'LOGININITIATED';
-          case 'oncall':
-            return s === 'ON CALL' || s === 'ONCALL' || s === 'RINGING' || s === 'OUTBOUND';
-          case 'break':
-            return s.includes('BREAK') || s === 'PAUSED' || (a.break_name != null && a.break_name !== '');
-          case 'loggedout':
-            return s === 'LOGGEDOUT' || s === 'LOGINFAILED' || s === 'DISABLED' || !s;
-          default:
-            return true;
-        }
-      });
-    }
-    if (search && search.trim()) {
-      const q = search.trim().toLowerCase();
-      list = list.filter(
-        (a) =>
-          (a.name || '').toLowerCase().includes(q) ||
-          (a.agent_id || '').toLowerCase().includes(q) ||
-          (a.extension || '').toLowerCase().includes(q)
-      );
-    }
-    return list;
-  }, [agents, statusFilter, search]);
-
-  const isOnCall = (a) => {
-    const s = (a.status || '').toUpperCase();
-    return s === 'ON CALL' || s === 'ONCALL' || s === 'RINGING' || s === 'OUTBOUND';
-  };
-
-  const isOnBreak = (a) => {
-    const s = (a.status || '').toUpperCase();
-    return s === 'PAUSED' || (s && s.includes('BREAK')) || (a.break_name != null && a.break_name !== '');
-  };
-
-  const isOnline = (a) => {
-    const s = (a.status || '').toUpperCase();
-    return s && !['LOGGEDOUT', 'LOGINFAILED', 'DISABLED', 'UNKNOWN'].includes(s);
-  };
-
-  const handleForceEndBreak = async (agentId) => {
-    setForceError('');
-    setForceLoading(agentId);
-    try {
-      const res = await apiFetch(`${apiBase}/live-agents/${encodeURIComponent(agentId)}/force-end-break`, { method: 'POST' });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok || !data.success) throw new Error(data.error || 'Failed');
-      if (onRefresh) onRefresh();
-    } catch (e) {
-      setForceError(e.message || 'Failed to end break');
-    } finally {
-      setForceLoading(null);
-    }
-  };
-
-  const handleForceLogout = async (agentId) => {
-    setForceError('');
-    setForceLoading(agentId);
-    try {
-      const res = await apiFetch(`${apiBase}/live-agents/${encodeURIComponent(agentId)}/force-logout`, { method: 'POST' });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok || !data.success) throw new Error(data.error || 'Failed');
-      if (onRefresh) onRefresh();
-    } catch (e) {
-      setForceError(e.message || 'Force logout failed');
-    } finally {
-      setForceLoading(null);
-    }
-  };
-
-  const handleMonitor = async (agentId, mode) => {
-    if (!onMonitor) return;
-    if (!(supervisorExtension || '').trim()) {
-      setMonitorError('Supervisor extension required');
-      return;
-    }
-    setMonitorError('');
-    setMonitorLoading(agentId);
-    try {
-      await onMonitor(agentId, mode);
-    } catch (e) {
-      setMonitorError(e.message || 'Request failed');
-    } finally {
-      setMonitorLoading(null);
-    }
-  };
-
-  return (
-    <>
-      <div className="la-header">
-        <h2 className="superadmin-section-title">Agent Live Monitoring</h2>
-        <span className="la-live-badge">
-          <span className="la-live-dot" />
-          Live
-        </span>
-      </div>
-
-      <div className="la-filters">
-        {tenants.length > 0 && (
-          <label className="la-filter-label">
-            Tenant
-            <select
-              className="superadmin-select la-select"
-              value={tenantId}
-              onChange={(e) => onTenantChange(e.target.value)}
-            >
-              <option value="all">All tenants</option>
-              {tenants.map((t) => (
-                <option key={t.id} value={t.id}>{t.name} ({t.id})</option>
-              ))}
-            </select>
-          </label>
-        )}
-        <label className="la-filter-label">
-          Status
-          <select
-            className="superadmin-select la-select"
-            value={statusFilter}
-            onChange={(e) => onStatusFilterChange(e.target.value)}
-          >
-            <option value="all">All statuses</option>
-            <option value="available">Available</option>
-            <option value="oncall">On Call / Ringing</option>
-            <option value="break">Break</option>
-            <option value="loggedout">Logged Out</option>
-          </select>
-        </label>
-        <label className="la-filter-label">
-          Search
-          <input
-            type="text"
-            className="la-search-input"
-            placeholder="Agent name, ID or extension…"
-            value={search}
-            onChange={(e) => onSearchChange(e.target.value)}
-          />
-        </label>
-        <label className="la-filter-label">
-          Supervisor ext.
-          <input
-            type="text"
-            className="la-search-input la-supervisor-ext"
-            placeholder="e.g. 7002"
-            value={supervisorExtension || ''}
-            onChange={(e) => onSupervisorExtensionChange(e.target.value)}
-            title="Your extension for Listen / Whisper / Barge"
-          />
-        </label>
-      </div>
-      {(monitorError || forceError) && (
-        <div className="la-monitor-error">{monitorError || forceError}</div>
-      )}
-
-      {stats && (
-        <div className="la-stats-grid">
-          <div className="la-stat-card">
-            <div className="la-stat-value">{stats.total}</div>
-            <div className="la-stat-label">Total</div>
-          </div>
-          <div className="la-stat-card la-stat-online">
-            <div className="la-stat-value">{stats.online}</div>
-            <div className="la-stat-label">Online</div>
-          </div>
-          <div className="la-stat-card la-stat-available">
-            <div className="la-stat-value">{stats.available}</div>
-            <div className="la-stat-label">Available</div>
-          </div>
-          <div className="la-stat-card la-stat-oncall">
-            <div className="la-stat-value">{stats.onCall}</div>
-            <div className="la-stat-label">On Call</div>
-          </div>
-          <div className="la-stat-card la-stat-break">
-            <div className="la-stat-value">{stats.onBreak}</div>
-            <div className="la-stat-label">On Break</div>
-          </div>
-          <div className="la-stat-card la-stat-loggedout">
-            <div className="la-stat-value">{stats.loggedOut}</div>
-            <div className="la-stat-label">Logged Out</div>
-          </div>
-        </div>
-      )}
-
-      <div className="la-table-wrap">
-        <table className="superadmin-table la-table">
-          <thead>
-            <tr>
-              <th>Agent</th>
-              <th>Extension</th>
-              <th>Status</th>
-              <th>Queue</th>
-              <th>Customer</th>
-              <th>DID/TFN</th>
-              <th>Calls</th>
-              <th>Login Duration</th>
-              <th>On break for</th>
-              <th>Tenant</th>
-              <th>Last Updated</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.length === 0 ? (
-              <tr>
-                <td colSpan={12} className="la-empty">No agents found.</td>
-              </tr>
-            ) : (
-              filtered.map((a) => {
-                const disp = getAgentStatusDisplay(a.status, a.break_name);
-                const onCall = isOnCall(a);
-                const loading = monitorLoading === a.agent_id;
-                return (
-                  <tr key={a.agent_id} className={disp.cls.includes('loggedout') ? 'la-row-dimmed' : ''}>
-                    <td>
-                      <span className="la-agent-name">{a.name}</span>
-                      <span className="la-agent-ext">{a.extension || a.agent_id || '—'}</span>
-                    </td>
-                    <td>{a.extension || '—'}</td>
-                    <td>
-                      <span className={`la-status-badge ${disp.cls}`}>
-                        <span className="la-status-dot" />
-                        {disp.label}
-                      </span>
-                    </td>
-                    <td>{a.queue_name || '—'}</td>
-                    <td>{a.customer_number || '—'}</td>
-                    <td>{onCall ? (a.call_did || '—') : '—'}</td>
-                    <td>{a.calls_taken}</td>
-                    <td>
-                      {a.session_started_at ? (
-                        <LiveAgentDuration sessionStartedAt={a.session_started_at} />
-                      ) : '—'}
-                    </td>
-                    <td>
-                      {a.break_started_at ? (
-                        <LiveBreakDuration breakStartedAt={a.break_started_at} />
-                      ) : '—'}
-                    </td>
-                    <td>{a.tenant_name || a.tenant_id || '—'}</td>
-                    <td className="la-timestamp">
-                      {a.timestamp
-                        ? new Date(a.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
-                        : '—'}
-                    </td>
-                    <td className="la-actions">
-                      {onCall ? (
-                        <>
-                          <span className="la-monitor-btns">
-                            <button
-                              type="button"
-                              className="la-btn la-btn-listen"
-                              disabled={loading}
-                              onClick={() => handleMonitor(a.agent_id, 'listen')}
-                              title="Listen only (you hear call, no one hears you)"
-                            >
-                              {loading ? '…' : 'Listen'}
-                            </button>
-                            <button
-                              type="button"
-                              className="la-btn la-btn-whisper"
-                              disabled={loading}
-                              onClick={() => handleMonitor(a.agent_id, 'whisper')}
-                              title="Whisper to agent only"
-                            >
-                              {loading ? '…' : 'Whisper'}
-                            </button>
-                            <button
-                              type="button"
-                              className="la-btn la-btn-barge"
-                              disabled={loading}
-                              onClick={() => handleMonitor(a.agent_id, 'barge')}
-                              title="Join call (everyone hears everyone)"
-                            >
-                              {loading ? '…' : 'Barge'}
-                            </button>
-                          </span>
-                          {isOnline(a) && (
-                            <>
-                              <span className="la-actions-sep" aria-hidden="true" />
-                              <span className="la-force-btns">
-                                <button
-                                  type="button"
-                                  className="la-btn la-btn-force-logout"
-                                  disabled={forceLoading === a.agent_id}
-                                  onClick={() => handleForceLogout(a.agent_id)}
-                                  title="Force logout: hang up channels, clear session, agent can re-login"
-                                >
-                                  {forceLoading === a.agent_id ? '…' : 'Force logout'}
-                                </button>
-                              </span>
-                            </>
-                          )}
-                        </>
-                      ) : (
-                        <span className="la-force-btns">
-                          {isOnBreak(a) && (
-                            <button
-                              type="button"
-                              className="la-btn la-btn-end-break"
-                              disabled={forceLoading === a.agent_id}
-                              onClick={() => handleForceEndBreak(a.agent_id)}
-                              title="Set agent to Available (clear break)"
-                            >
-                              {forceLoading === a.agent_id ? '…' : 'End break'}
-                            </button>
-                          )}
-                          {isOnline(a) && (
-                            <button
-                              type="button"
-                              className="la-btn la-btn-force-logout"
-                              disabled={forceLoading === a.agent_id}
-                              onClick={() => handleForceLogout(a.agent_id)}
-                              title="Force logout: hang up Asterisk channels, clear session, ready for re-login"
-                            >
-                              {forceLoading === a.agent_id ? '…' : 'Force logout'}
-                            </button>
-                          )}
-                          {!isOnline(a) && !isOnBreak(a) && '—'}
-                        </span>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
-      </div>
-    </>
   );
 }

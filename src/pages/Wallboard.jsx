@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo, memo } from 'react';
 import Layout from '../components/Layout';
 import { useAuth } from '../context/AuthContext';
 import { apiFetch, API_BASE } from '../utils/api';
@@ -31,7 +31,7 @@ const STATUS_LABELS = {
 };
 
 
-function WallboardBreakDuration({ breakStartedAt }) {
+const WallboardBreakDuration = memo(function WallboardBreakDuration({ breakStartedAt }) {
   const [elapsed, setElapsed] = useState(() =>
     breakStartedAt ? Math.max(0, Math.floor((Date.now() - new Date(breakStartedAt).getTime()) / 1000)) : 0
   );
@@ -43,7 +43,7 @@ function WallboardBreakDuration({ breakStartedAt }) {
     return () => clearInterval(id);
   }, [breakStartedAt]);
   return <span className="wb-mono">{formatDuration(elapsed)}</span>;
-}
+});
 
 export default function Wallboard() {
   const [tenantId, setTenantId] = useState(() => {

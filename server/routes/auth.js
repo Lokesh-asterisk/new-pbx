@@ -13,6 +13,7 @@ import { endAgentSession } from '../agent-sessions.js';
 import { hangupChannel } from '../asterisk-ari.js';
 import { getAgentLoginChannel } from '../ari-stasis-queue.js';
 import { broadcastToWallboard } from '../realtime.js';
+import { validate, loginSchema, changePasswordSchema } from '../utils/schemas.js';
 
 const router = express.Router();
 
@@ -34,12 +35,9 @@ async function clearPreviousAgentStatusOnLogin(req) {
   await query('UPDATE users SET soft_phone_login_status = 0 WHERE phone_login_number = ? LIMIT 1', [phoneNum]).catch(() => {});
 }
 
-router.post('/login', async (req, res) => {
+router.post('/login', validate(loginSchema), async (req, res) => {
   try {
-    const { username, password } = req.body || {};
-    if (!username || !password) {
-      return res.status(400).json({ success: false, error: 'Username and password required' });
-    }
+    const { username, password } = req.body;
     const trimmedUsername = String(username).trim();
     const user = await findUserByUsername(trimmedUsername);
     if (!user) {
@@ -135,7 +133,7 @@ router.post('/logout', async (req, res) => {
   }
 });
 
-router.post('/change-password', async (req, res) => {
+router.post('/change-password', validate(changePasswordSchema), async (req, res) => {
   try {
     const userId = req.session?.user?.id;
     if (!userId) {

@@ -9,6 +9,7 @@ import { addChannelToBridge, removeChannelFromBridge, hangupChannel, createBridg
 import { getOrderedQueueMembers } from './queue-strategy.js';
 import { resolveAgentUserByExtensionName } from './agent-extension-resolver.js';
 import { broadcastToWallboard } from './realtime.js';
+import { registerStateMaps, loadStateFromRedis, startAriStateSync } from './ari-state-redis.js';
 
 function broadcastQueueChange(queueName, tenantId) {
   if (!tenantId) return;
@@ -52,6 +53,16 @@ const pendingSupervisorJoin = new Map();
 const pendingOutbound = new Map();
 // Outbound call active: outbound channel id -> { agentChannelId, bridgeId, uniqueId }
 const activeOutboundCalls = new Map();
+
+registerStateMaps({
+  pendingCustomers,
+  pendingAgents,
+  activeBridgedCalls,
+  agentLoginStasisChannels,
+  pendingSupervisorJoin,
+  pendingOutbound,
+  activeOutboundCalls,
+});
 
 function parseAriError(body) {
   if (!body || typeof body !== 'string') return null;
@@ -630,8 +641,10 @@ function connect() {
   }
 }
 
-export function startQueueStasisClient() {
+export async function startQueueStasisClient() {
   if (!process.env.ASTERISK_ARI_URL || !process.env.ASTERISK_ARI_USER) return;
+  await loadStateFromRedis().catch(() => {});
+  startAriStateSync();
   connect();
 }
 

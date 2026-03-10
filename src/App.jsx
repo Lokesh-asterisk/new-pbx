@@ -1,12 +1,22 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ProtectedRoute, getRoleRedirectPath } from './components/ProtectedRoute';
-import Login from './pages/Login';
-import Dashboard from './pages/SuperAdmin';
-import Agent from './pages/Agent';
-import Wallboard from './pages/Wallboard';
-import Reports from './pages/Reports';
 import './App.css';
+
+const Login = lazy(() => import('./pages/Login'));
+const Dashboard = lazy(() => import('./pages/SuperAdmin'));
+const Agent = lazy(() => import('./pages/Agent'));
+const Wallboard = lazy(() => import('./pages/Wallboard'));
+const Reports = lazy(() => import('./pages/Reports'));
+
+function PageLoader() {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', color: 'var(--text-muted)' }}>
+      <span>Loading...</span>
+    </div>
+  );
+}
 
 function RootRedirect() {
   const { user } = useAuth();
@@ -18,6 +28,7 @@ function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
+        <Suspense fallback={<PageLoader />}>
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/" element={<RootRedirect />} />
@@ -80,6 +91,7 @@ function App() {
           />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        </Suspense>
       </BrowserRouter>
     </AuthProvider>
   );

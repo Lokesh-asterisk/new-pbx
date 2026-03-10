@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getRoleRedirectPath } from '../components/ProtectedRoute';
+import ThemeToggle from '../components/ThemeToggle';
 import './Login.css';
 
 export default function Login() {
@@ -28,6 +29,7 @@ export default function Login() {
 
   return (
     <div className="login-page">
+      <div className="login-theme-toggle"><ThemeToggle /></div>
       <div className="login-card">
         <div className="login-header">
           <div className="login-logo">

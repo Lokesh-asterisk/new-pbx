@@ -1,5 +1,5 @@
 .agent-loading {
-  color: #94a3b8;
+  color: var(--text-muted);
   margin: 1rem 0;
 }
 
@@ -19,8 +19,8 @@
   flex-wrap: wrap;
   gap: 0.75rem;
   padding: 0.75rem 1rem;
-  background: #1e293b;
-  border: 1px solid #334155;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
   border-radius: 12px;
   margin-bottom: 1rem;
 }
@@ -34,7 +34,7 @@
 .agent-login-timer {
   font-size: 1rem;
   font-variant-numeric: tabular-nums;
-  color: #e2e8f0;
+  color: var(--text-secondary);
 }
 
 .agent-status-badge {
@@ -147,14 +147,14 @@
 }
 
 .agent-action-change-password {
-  color: #64748b;
+  color: var(--text-placeholder);
   background: rgba(100, 116, 139, 0.15);
-  border-color: #64748b;
+  border-color: var(--text-placeholder);
 }
 
 .agent-action-change-password:hover {
   background: rgba(100, 116, 139, 0.25);
-  color: #94a3b8;
+  color: var(--text-muted);
 }
 
 .agent-action-end-session {
@@ -177,8 +177,8 @@
   left: 0;
   margin-top: 0.25rem;
   min-width: 140px;
-  background: #0f172a;
-  border: 1px solid #334155;
+  background: var(--bg-page);
+  border: 1px solid var(--border-default);
   border-radius: 8px;
   padding: 0.25rem;
   z-index: 10;
@@ -191,7 +191,7 @@
   padding: 0.5rem 0.75rem;
   font-size: 0.8125rem;
   text-align: left;
-  color: #e2e8f0;
+  color: var(--text-secondary);
   background: none;
   border: none;
   border-radius: 6px;
@@ -199,7 +199,7 @@
 }
 
 .agent-break-menu-item:hover {
-  background: #334155;
+  background: var(--bg-elevated);
 }
 
 /* Main content grid */
@@ -227,13 +227,13 @@
   margin: 0 0 1rem;
   font-size: 0.9375rem;
   font-weight: 600;
-  color: #f1f5f9;
+  color: var(--text-primary);
 }
 
 /* Call information panel */
 .agent-call-info-panel {
-  background: #1e293b;
-  border: 1px solid #334155;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
   border-radius: 12px;
   padding: 1.25rem;
   display: flex;
@@ -255,8 +255,8 @@
 
 .agent-call-card {
   padding: 1rem;
-  background: #0f172a;
-  border: 1px solid #334155;
+  background: var(--bg-page);
+  border: 1px solid var(--border-default);
   border-radius: 8px;
 }
 
@@ -264,7 +264,7 @@
   margin: 0 0 0.75rem;
   font-size: 0.8125rem;
   font-weight: 600;
-  color: #94a3b8;
+  color: var(--text-muted);
   text-transform: uppercase;
 }
 
@@ -278,7 +278,7 @@
 
 .agent-call-card dt {
   margin-top: 0.5rem;
-  color: #64748b;
+  color: var(--text-placeholder);
   font-weight: 500;
 }
 
@@ -286,21 +286,21 @@
 
 .agent-call-card dd {
   margin: 0.25rem 0 0;
-  color: #e2e8f0;
+  color: var(--text-secondary);
 }
 
 .agent-active-call-detail {
   margin-top: auto;
   padding: 1rem;
-  background: #0f172a;
-  border: 1px solid #334155;
+  background: var(--bg-page);
+  border: 1px solid var(--border-default);
   border-radius: 8px;
 }
 
 .agent-active-call-detail h3 {
   margin: 0 0 0.5rem;
   font-size: 0.8125rem;
-  color: #94a3b8;
+  color: var(--text-muted);
   text-transform: uppercase;
 }
 
@@ -313,25 +313,25 @@
 
 .agent-active-call-dir {
   font-size: 0.75rem;
-  color: #94a3b8;
+  color: var(--text-muted);
   text-transform: uppercase;
 }
 
 .agent-active-call-number {
   font-size: 1.125rem;
   font-weight: 600;
-  color: #f1f5f9;
+  color: var(--text-primary);
 }
 
 .agent-active-call-duration {
   font-size: 0.875rem;
-  color: #64748b;
+  color: var(--text-placeholder);
   font-variant-numeric: tabular-nums;
 }
 
 .agent-call-state {
   font-size: 0.75rem;
-  color: #94a3b8;
+  color: var(--text-muted);
   text-transform: uppercase;
 }
 
@@ -353,12 +353,12 @@
 }
 
 .btn-hold {
-  color: #e2e8f0;
-  background: #475569;
+  color: var(--text-secondary);
+  background: var(--border-subtle);
 }
 
 .btn-hold:hover:not(:disabled) {
-  background: #64748b;
+  background: var(--text-placeholder);
 }
 
 .btn-resume {
@@ -386,7 +386,7 @@
 .agent-incoming-popup {
   margin-top: 0.75rem;
   padding: 1.25rem;
-  background: #0f172a;
+  background: var(--bg-page);
   border: 2px solid #f59e0b;
   border-radius: 12px;
   animation: pulse-ring 1.5s ease-in-out infinite;
@@ -400,7 +400,7 @@
 .agent-incoming-popup h3 {
   margin: 0 0 0.5rem;
   font-size: 0.8125rem;
-  color: #94a3b8;
+  color: var(--text-muted);
   text-transform: uppercase;
 }
 
@@ -408,21 +408,21 @@
   margin: 0 0 0.25rem;
   font-size: 0.875rem;
   font-weight: 600;
-  color: var(--text-secondary, #64748b);
+  color: var(--text-secondary, var(--text-placeholder));
 }
 
 .agent-incoming-number {
   margin: 0 0 0.25rem;
   font-size: 1.25rem;
   font-weight: 600;
-  color: #f1f5f9;
+  color: var(--text-primary);
   font-variant-numeric: tabular-nums;
 }
 
 .agent-incoming-queue {
   margin: 0 0 1rem;
   font-size: 0.8125rem;
-  color: #64748b;
+  color: var(--text-placeholder);
 }
 
 .agent-incoming-connecting {
@@ -462,7 +462,7 @@
   margin-top: auto;
   padding: 1rem;
   text-align: center;
-  color: #64748b;
+  color: var(--text-placeholder);
   font-size: 0.875rem;
 }
 
@@ -474,8 +474,8 @@
 
 /* CRM panel */
 .agent-crm-panel {
-  background: #1e293b;
-  border: 1px solid #334155;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
   border-radius: 12px;
   padding: 1.25rem;
   display: flex;
@@ -492,9 +492,9 @@
   flex: 1;
   padding: 0.625rem 0.875rem;
   font-size: 0.9375rem;
-  color: #f1f5f9;
-  background: #0f172a;
-  border: 1px solid #334155;
+  color: var(--text-primary);
+  background: var(--bg-page);
+  border: 1px solid var(--border-default);
   border-radius: 8px;
 }
 
@@ -528,8 +528,8 @@
   flex: 1;
   min-height: 120px;
   padding: 1rem;
-  background: #0f172a;
-  border: 1px solid #334155;
+  background: var(--bg-page);
+  border: 1px solid var(--border-default);
   border-radius: 8px;
   font-size: 0.875rem;
 }
@@ -537,7 +537,7 @@
 .agent-crm-empty,
 .agent-crm-loading {
   margin: 0;
-  color: #64748b;
+  color: var(--text-placeholder);
 }
 
 .agent-crm-error {
@@ -551,7 +551,7 @@
 
 .agent-crm-data p {
   margin: 0.5rem 0;
-  color: #e2e8f0;
+  color: var(--text-secondary);
 }
 
 .agent-crm-data p:first-child { margin-top: 0; }
@@ -564,8 +564,8 @@
 .agent-status-panel,
 .agent-dial-panel,
 .agent-contacts-panel {
-  background: #1e293b;
-  border: 1px solid #334155;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
   border-radius: 12px;
   padding: 1.25rem;
   display: flex;
@@ -579,7 +579,7 @@
   margin: 0 0 1rem;
   font-size: 0.875rem;
   font-weight: 600;
-  color: #94a3b8;
+  color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -597,17 +597,17 @@
   gap: 0.375rem;
   padding: 0.5rem 0.75rem;
   font-size: 0.8125rem;
-  color: #94a3b8;
-  background: #0f172a;
-  border: 1px solid #334155;
+  color: var(--text-muted);
+  background: var(--bg-page);
+  border: 1px solid var(--border-default);
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .status-btn:hover {
-  color: #e2e8f0;
-  border-color: #475569;
+  color: var(--text-secondary);
+  border-color: var(--border-subtle);
 }
 
 .status-btn.active {
@@ -623,8 +623,8 @@
 .active-call-card {
   margin-top: 1rem;
   padding: 1rem;
-  background: #0f172a;
-  border: 1px solid #334155;
+  background: var(--bg-page);
+  border: 1px solid var(--border-default);
   border-radius: 8px;
 }
 
@@ -637,19 +637,19 @@
 
 .call-direction {
   font-size: 0.75rem;
-  color: #94a3b8;
+  color: var(--text-muted);
   text-transform: uppercase;
 }
 
 .call-number {
   font-size: 1.125rem;
   font-weight: 600;
-  color: #f1f5f9;
+  color: var(--text-primary);
 }
 
 .call-duration {
   font-size: 0.875rem;
-  color: #64748b;
+  color: var(--text-placeholder);
   font-variant-numeric: tabular-nums;
 }
 
@@ -674,9 +674,9 @@
   padding: 0.75rem 1rem;
   font-size: 1.25rem;
   font-variant-numeric: tabular-nums;
-  color: #f1f5f9;
-  background: #0f172a;
-  border: 1px solid #334155;
+  color: var(--text-primary);
+  background: var(--bg-page);
+  border: 1px solid var(--border-default);
   border-radius: 8px;
   margin-bottom: 1rem;
   min-height: 48px;
@@ -690,7 +690,7 @@
 }
 
 .dial-display-input::placeholder {
-  color: #64748b;
+  color: var(--text-placeholder);
 }
 
 .dialpad {
@@ -704,17 +704,17 @@
   padding: 0.875rem;
   font-size: 1.25rem;
   font-weight: 500;
-  color: #e2e8f0;
-  background: #0f172a;
-  border: 1px solid #334155;
+  color: var(--text-secondary);
+  background: var(--bg-page);
+  border: 1px solid var(--border-default);
   border-radius: 8px;
   cursor: pointer;
   transition: background 0.2s, border-color 0.2s;
 }
 
 .dial-key:hover {
-  background: #334155;
-  border-color: #475569;
+  background: var(--bg-elevated);
+  border-color: var(--border-subtle);
 }
 
 .dial-actions {
@@ -726,17 +726,17 @@
 .btn-backspace {
   padding: 0.625rem 1rem;
   font-size: 1rem;
-  color: #94a3b8;
-  background: #0f172a;
-  border: 1px solid #334155;
+  color: var(--text-muted);
+  background: var(--bg-page);
+  border: 1px solid var(--border-default);
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .btn-backspace:hover {
-  color: #f1f5f9;
-  border-color: #475569;
+  color: var(--text-primary);
+  border-color: var(--border-subtle);
 }
 
 .btn-call {
@@ -767,7 +767,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 0.75rem 0;
-  border-bottom: 1px solid #334155;
+  border-bottom: 1px solid var(--border-default);
   gap: 0.75rem;
 }
 
@@ -778,12 +778,12 @@
 .contact-name {
   font-size: 0.9375rem;
   font-weight: 500;
-  color: #f1f5f9;
+  color: var(--text-primary);
 }
 
 .contact-number {
   font-size: 0.8125rem;
-  color: #64748b;
+  color: var(--text-placeholder);
   font-variant-numeric: tabular-nums;
 }
 
@@ -815,7 +815,7 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.5rem 0;
-  color: #94a3b8;
+  color: var(--text-muted);
 }
 
 .recent-dir {
@@ -833,19 +833,19 @@
 
 .recent-num {
   font-variant-numeric: tabular-nums;
-  color: #cbd5e1;
+  color: var(--text-label);
 }
 
 .recent-empty {
   padding: 0.5rem 0;
-  color: #64748b;
+  color: var(--text-placeholder);
 }
 
 /* Transfer modal */
 .agent-modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
+  background: var(--bg-overlay);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -853,8 +853,8 @@
 }
 
 .agent-modal {
-  background: #1e293b;
-  border: 1px solid #334155;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
   border-radius: 12px;
   padding: 1.5rem;
   min-width: 320px;
@@ -864,16 +864,16 @@
 .agent-modal h3 {
   margin: 0 0 1rem;
   font-size: 1rem;
-  color: #f1f5f9;
+  color: var(--text-primary);
 }
 
 .agent-transfer-input {
   width: 100%;
   padding: 0.625rem 0.875rem;
   font-size: 0.9375rem;
-  color: #f1f5f9;
-  background: #0f172a;
-  border: 1px solid #334155;
+  color: var(--text-primary);
+  background: var(--bg-page);
+  border: 1px solid var(--border-default);
   border-radius: 8px;
   margin-bottom: 1rem;
   box-sizing: border-box;
@@ -894,17 +894,17 @@
   flex: 1;
   padding: 0.5rem 0.75rem;
   font-size: 0.8125rem;
-  color: #94a3b8;
-  background: #0f172a;
-  border: 1px solid #334155;
+  color: var(--text-muted);
+  background: var(--bg-page);
+  border: 1px solid var(--border-default);
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .agent-transfer-btn:hover {
-  border-color: #475569;
-  color: #e2e8f0;
+  border-color: var(--border-subtle);
+  color: var(--text-secondary);
 }
 
 .agent-transfer-btn.active {
@@ -922,16 +922,16 @@
 .agent-modal-cancel {
   padding: 0.5rem 1rem;
   font-size: 0.875rem;
-  color: #94a3b8;
+  color: var(--text-muted);
   background: transparent;
-  border: 1px solid #334155;
+  border: 1px solid var(--border-default);
   border-radius: 8px;
   cursor: pointer;
 }
 
 .agent-modal-cancel:hover {
-  border-color: #475569;
-  color: #e2e8f0;
+  border-color: var(--border-subtle);
+  color: var(--text-secondary);
 }
 
 .agent-modal-confirm {
@@ -957,7 +957,7 @@
 /* Change password modal */
 .agent-modal-hint {
   font-size: 0.8125rem;
-  color: #94a3b8;
+  color: var(--text-muted);
   margin: -0.5rem 0 1rem;
 }
 

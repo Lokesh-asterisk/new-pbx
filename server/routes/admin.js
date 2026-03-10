@@ -16,6 +16,7 @@ import { csvEscape } from '../utils/csv.js';
 import { performForceEndBreak, performForceLogout } from '../utils/agent-actions.js';
 import { ensureAgentInTenant } from '../utils/tenant.js';
 import { sanitizeAgentId } from '../utils/validation.js';
+import { validate, blacklistSchema, monitorSchema } from '../utils/schemas.js';
 
 const router = express.Router();
 
@@ -80,7 +81,7 @@ router.get('/blacklist', async (req, res) => {
   }
 });
 
-router.post('/blacklist', async (req, res) => {
+router.post('/blacklist', validate(blacklistSchema), async (req, res) => {
   try {
     const user = req.session?.user;
     const isSuperadmin = user?.role === 'superadmin' || user?.role === 1;
@@ -381,7 +382,7 @@ router.get('/live-agents', async (req, res) => {
 });
 
 // POST /live-agents/:agentId/monitor - Barge, Whisper, or Listen (admin: agent must be in admin's tenant)
-router.post('/live-agents/:agentId/monitor', async (req, res) => {
+router.post('/live-agents/:agentId/monitor', validate(monitorSchema), async (req, res) => {
   try {
     const agentId = (req.params.agentId || '').toString().trim().replace(/\D/g, '') || null;
     const { mode, supervisor_extension } = req.body || {};

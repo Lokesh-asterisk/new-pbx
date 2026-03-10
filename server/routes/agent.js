@@ -22,6 +22,11 @@ import {
 import { setExtensionAgentUserId } from '../agent-extension-resolver.js';
 import { endAgentSession, logAgentStatusChange } from '../agent-sessions.js';
 import { normalizePhoneForBlacklist } from '../utils/phone.js';
+import {
+  validate, breakStartSchema, breakEndSchema, selectExtensionSchema,
+  callExtensionSchema, blockNumberSchema, channelActionSchema,
+  transferSchema, dialSchema,
+} from '../utils/schemas.js';
 
 const router = express.Router();
 
@@ -276,7 +281,7 @@ router.get('/session', async (req, res) => {
  * Start a break. Body: { reason: string }.
  * Updates agent_status so the wallboard sees the agent as on break.
  */
-router.post('/break/start', async (req, res) => {
+router.post('/break/start', validate(breakStartSchema), async (req, res) => {
   try {
     const userId = req.agentUser.id;
     const { reason } = req.body || {};
@@ -360,7 +365,7 @@ router.post('/outbound/end', async (req, res) => {
  * Record end of a break. Body: { startTime: number (ms), reason: string }.
  * Updates agent_status first (so live monitoring/wallboard show Available), then persists to session_agent_breaks.
  */
-router.post('/break/end', async (req, res) => {
+router.post('/break/end', validate(breakEndSchema), async (req, res) => {
   try {
     const userId = req.agentUser.id;
     const tenantId = req.agentUser.parent_id;
@@ -452,7 +457,7 @@ router.get('/crm', async (req, res) => {
   }
 });
 
-router.post('/select-extension', async (req, res) => {
+router.post('/select-extension', validate(selectExtensionSchema), async (req, res) => {
   try {
     const { extension_id, extension_name } = req.body || {};
     const tenantId = req.agentUser.parent_id;
@@ -521,7 +526,7 @@ router.post('/clear-extension', async (req, res) => {
 /**
  * Block a number (e.g. prank caller). Adds to tenant blacklist so future calls from this number are dropped at InboundRoute.
  */
-router.post('/block-number', async (req, res) => {
+router.post('/block-number', validate(blockNumberSchema), async (req, res) => {
   try {
     const tenantId = req.agentUser.parent_id;
     if (tenantId == null) {
@@ -605,7 +610,7 @@ router.post('/logout', async (req, res) => {
  * sets agent_status to LOGGEDIN and soft_phone_login_status = 1. Frontend should poll GET /status
  * until agentStatus === 'LOGGEDIN' then redirect to dashboard.
  */
-router.post('/call-extension', async (req, res) => {
+router.post('/call-extension', validate(callExtensionSchema), async (req, res) => {
   try {
     if (!isAriConfigured()) {
       return res.status(503).json({
@@ -706,7 +711,7 @@ async function getAgentPhoneAndStatus(req) {
   return { phoneNum, status };
 }
 
-router.post('/calls/answer', async (req, res) => {
+router.post('/calls/answer', validate(channelActionSchema), async (req, res) => {
   try {
     if (!isAriConfigured()) {
       return res.status(503).json({ success: false, error: 'ARI not configured' });
@@ -746,7 +751,7 @@ router.post('/calls/answer', async (req, res) => {
   }
 });
 
-router.post('/calls/reject', async (req, res) => {
+router.post('/calls/reject', validate(channelActionSchema), async (req, res) => {
   try {
     if (!isAriConfigured()) {
       return res.status(503).json({ success: false, error: 'ARI not configured' });
@@ -778,7 +783,7 @@ router.post('/calls/reject', async (req, res) => {
   }
 });
 
-router.post('/calls/hangup', async (req, res) => {
+router.post('/calls/hangup', validate(channelActionSchema), async (req, res) => {
   try {
     if (!isAriConfigured()) {
       return res.status(503).json({ success: false, error: 'ARI not configured' });
@@ -808,7 +813,7 @@ router.post('/calls/hangup', async (req, res) => {
   }
 });
 
-router.post('/calls/hold', async (req, res) => {
+router.post('/calls/hold', validate(channelActionSchema), async (req, res) => {
   try {
     if (!isAriConfigured()) {
       return res.status(503).json({ success: false, error: 'ARI not configured' });
@@ -831,7 +836,7 @@ router.post('/calls/hold', async (req, res) => {
   }
 });
 
-router.post('/calls/unhold', async (req, res) => {
+router.post('/calls/unhold', validate(channelActionSchema), async (req, res) => {
   try {
     if (!isAriConfigured()) {
       return res.status(503).json({ success: false, error: 'ARI not configured' });
@@ -854,7 +859,7 @@ router.post('/calls/unhold', async (req, res) => {
   }
 });
 
-router.post('/calls/transfer', async (req, res) => {
+router.post('/calls/transfer', validate(transferSchema), async (req, res) => {
   try {
     if (!isAriConfigured()) {
       return res.status(503).json({ success: false, error: 'ARI not configured' });
@@ -897,7 +902,7 @@ router.post('/calls/transfer', async (req, res) => {
   }
 });
 
-router.post('/calls/dial', async (req, res) => {
+router.post('/calls/dial', validate(dialSchema), async (req, res) => {
   try {
     if (!isAriConfigured()) {
       return res.status(503).json({ success: false, error: 'ARI not configured' });

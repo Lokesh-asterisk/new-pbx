@@ -1,9 +1,11 @@
+@import './theme.css';
+
 :root {
   font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
   line-height: 1.5;
   font-weight: 400;
-  color: #f1f5f9;
-  background-color: #0f172a;
+  color: var(--text-primary);
+  background-color: var(--bg-page);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
