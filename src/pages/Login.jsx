@@ -18,8 +18,9 @@ export default function Login() {
     setError('');
     const result = await login(username.trim(), password);
     if (result.success) {
-      const redirect = from !== '/' && from !== '/login' ? from : getRoleRedirectPath(result.user.role);
-      navigate(redirect, { replace: true });
+      const redirect = from !== '/' && from !== '/login' ? from : getRoleRedirectPath(result.user?.role);
+      // Defer navigation so AuthProvider has committed the new user before we render the target route
+      setTimeout(() => navigate(redirect, { replace: true }), 0);
     } else {
       setError(result.error || 'Login failed');
     }
@@ -61,7 +62,8 @@ export default function Login() {
               required
             />
           </div>
-          <p className="login-hint">Demo: username <code>agent</code> / <code>admin</code> / <code>user</code> / <code>superadmin</code>, password <code>demo123</code>.</p>
+          <p className="login-hint">Sign in with a user created in Super Admin. Agents need extension and PIN set in Edit phone / PIN.</p>
+          <p className="login-hint login-hint-muted">After seed: superadmin, admin, user, agent, agent2 — password: demo123. Run API with <code>npm run server</code> (port 3001).</p>
           <button type="submit" className="btn-login">Sign in</button>
         </form>
       </div>

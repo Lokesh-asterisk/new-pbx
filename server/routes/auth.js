@@ -1,15 +1,38 @@
 import express from 'express';
+import bcrypt from 'bcrypt';
 import {
-  verifyLogin,
+  findUserByUsername,
   updateLastLogin,
   updatePassword,
-  getPermissions,
+  getEnabledModules,
   buildSessionUser,
   verifyCurrentPassword,
 } from '../auth.js';
-import { query } from '../db.js';
+import { query, queryOne } from '../db.js';
+import { endAgentSession } from '../agent-sessions.js';
+import { hangupChannel } from '../asterisk-ari.js';
+import { getAgentLoginChannel } from '../ari-stasis-queue.js';
+import { broadcastToWallboard } from '../realtime.js';
 
 const router = express.Router();
+
+/** When a new user logs in in the same browser, mark the previous session's agent as LoggedOut so live monitoring does not show them as Available. */
+async function clearPreviousAgentStatusOnLogin(req) {
+  const prev = req.session?.user;
+  if (!prev || prev.role !== 'agent' || !prev.id) return;
+  const row = await queryOne(
+    'SELECT phone_login_number FROM users WHERE id = ? AND role = 5 LIMIT 1',
+    [prev.id]
+  );
+  const phoneNum = row?.phone_login_number != null ? String(row.phone_login_number) : null;
+  if (!phoneNum) return;
+  await endAgentSession(phoneNum, 'normal');
+  await query(
+    `UPDATE agent_status SET status = 'LoggedOut', agent_channel_id = NULL, session_started_at = NULL, timestamp = NOW() WHERE agent_id = ?`,
+    [phoneNum]
+  );
+  await query('UPDATE users SET soft_phone_login_status = 0 WHERE phone_login_number = ? LIMIT 1', [phoneNum]).catch(() => {});
+}
 
 router.post('/login', async (req, res) => {
   try {
@@ -17,13 +40,22 @@ router.post('/login', async (req, res) => {
     if (!username || !password) {
       return res.status(400).json({ success: false, error: 'Username and password required' });
     }
-    const user = await verifyLogin(String(username).trim(), password);
+    const trimmedUsername = String(username).trim();
+    const user = await findUserByUsername(trimmedUsername);
     if (!user) {
       return res.status(401).json({ success: false, error: 'Invalid credentials or account disabled' });
     }
+    if (user.account_status !== 1) {
+      return res.status(401).json({ success: false, error: 'Account is disabled. Enable it in Super Admin → Users (set status to Active).' });
+    }
+    const ok = await bcrypt.compare(password, user.password_hash);
+    if (!ok) {
+      return res.status(401).json({ success: false, error: 'Invalid credentials or account disabled' });
+    }
+    await clearPreviousAgentStatusOnLogin(req);
     await updateLastLogin(user.id);
-    const permissions = await getPermissions(user.permission_group_id);
-    const sessionUser = buildSessionUser(user, permissions);
+    const modules = await getEnabledModules(user.role);
+    const sessionUser = buildSessionUser(user, modules);
     req.session = req.session || {};
     req.session.user = sessionUser;
     if (sessionUser.role === 'agent') {
@@ -45,9 +77,46 @@ router.post('/login', async (req, res) => {
   }
 });
 
-router.post('/logout', (req, res) => {
+router.post('/logout', async (req, res) => {
   const userId = req.session?.user?.id;
   const session = req.session;
+  const wasAgent = req.session?.user?.role === 'agent';
+
+  if (wasAgent && userId) {
+    try {
+      const row = await queryOne(
+        'SELECT phone_login_number FROM users WHERE id = ? AND role = 5 LIMIT 1',
+        [userId]
+      );
+      const phoneNum = row?.phone_login_number != null ? String(row.phone_login_number) : null;
+      if (phoneNum) {
+        const loginCh = getAgentLoginChannel(phoneNum);
+        const statusRow = await queryOne(
+          'SELECT agent_channel_id, tenant_id FROM agent_status WHERE agent_id = ? LIMIT 1',
+          [phoneNum]
+        );
+        const channelId = statusRow?.agent_channel_id;
+        const toHangup = loginCh || (channelId && typeof channelId === 'string' && channelId.trim()) || null;
+        if (toHangup) {
+          await hangupChannel(toHangup).catch((e) =>
+            console.warn('[auth logout] ARI hangup:', e?.message || e)
+          );
+        }
+        await endAgentSession(phoneNum, 'normal');
+        await query(
+          `UPDATE agent_status SET status = 'LoggedOut', agent_channel_id = NULL, session_started_at = NULL, break_started_at = NULL, timestamp = NOW() WHERE agent_id = ?`,
+          [phoneNum]
+        );
+        await query('UPDATE users SET soft_phone_login_status = 0 WHERE phone_login_number = ? LIMIT 1', [phoneNum]).catch(() => {});
+        if (statusRow?.tenant_id) {
+          broadcastToWallboard(statusRow.tenant_id, { type: 'agent_status', payload: { agent_id: phoneNum, status: 'LoggedOut', break_started_at: null } });
+        }
+      }
+    } catch (e) {
+      console.warn('[auth logout] agent cleanup:', e?.message || e);
+    }
+  }
+
   if (userId) {
     query('DELETE FROM agent_extension_usage WHERE user_id = ?', [userId]).catch(() => {});
   }

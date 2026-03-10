@@ -2,10 +2,10 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ProtectedRoute, getRoleRedirectPath } from './components/ProtectedRoute';
 import Login from './pages/Login';
-import SuperAdmin from './pages/SuperAdmin';
-import Admin from './pages/Admin';
-import User from './pages/User';
+import Dashboard from './pages/SuperAdmin';
 import Agent from './pages/Agent';
+import Wallboard from './pages/Wallboard';
+import Reports from './pages/Reports';
 import './App.css';
 
 function RootRedirect() {
@@ -22,10 +22,19 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/" element={<RootRedirect />} />
           <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute allowedRoles={['superadmin', 'admin', 'user']}>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+          {/* Legacy routes redirect to unified dashboard */}
+          <Route
             path="/superadmin"
             element={
               <ProtectedRoute allowedRoles={['superadmin']}>
-                <SuperAdmin />
+                <Navigate to="/dashboard" replace />
               </ProtectedRoute>
             }
           />
@@ -33,7 +42,7 @@ function App() {
             path="/admin"
             element={
               <ProtectedRoute allowedRoles={['admin']}>
-                <Admin />
+                <Navigate to="/dashboard" replace />
               </ProtectedRoute>
             }
           />
@@ -41,7 +50,23 @@ function App() {
             path="/user"
             element={
               <ProtectedRoute allowedRoles={['user']}>
-                <User />
+                <Navigate to="/dashboard" replace />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/wallboard"
+            element={
+              <ProtectedRoute allowedRoles={['superadmin', 'admin', 'user']}>
+                <Wallboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/reports"
+            element={
+              <ProtectedRoute allowedRoles={['superadmin', 'admin', 'user']}>
+                <Reports />
               </ProtectedRoute>
             }
           />

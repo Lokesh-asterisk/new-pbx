@@ -37,24 +37,16 @@ CREATE TABLE IF NOT EXISTS users (
   INDEX idx_permission_group (permission_group_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Permission groups (replaces user_group)
-CREATE TABLE IF NOT EXISTS permission_groups (
+-- Dynamic role-module access control (replaces permission_groups)
+-- SuperAdmin (role=1) always has full access and is NOT stored here.
+CREATE TABLE IF NOT EXISTS role_modules (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  tenant_id INT UNSIGNED NOT NULL,
-  name VARCHAR(64) NOT NULL,
-  queue_cdr TINYINT UNSIGNED NOT NULL DEFAULT 0,
-  manual_cdr TINYINT UNSIGNED NOT NULL DEFAULT 0,
-  extension_cdr TINYINT UNSIGNED NOT NULL DEFAULT 0,
-  extension_route_cdr TINYINT UNSIGNED NOT NULL DEFAULT 0,
-  live_agents TINYINT UNSIGNED NOT NULL DEFAULT 0,
-  agent_apr TINYINT UNSIGNED NOT NULL DEFAULT 0,
-  session_wise_agent_apr TINYINT UNSIGNED NOT NULL DEFAULT 0,
-  inbound_route TINYINT UNSIGNED NOT NULL DEFAULT 0,
-  blacklist TINYINT UNSIGNED NOT NULL DEFAULT 0,
-  number_masking TINYINT UNSIGNED NOT NULL DEFAULT 0,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  role TINYINT UNSIGNED NOT NULL,
+  module_key VARCHAR(64) NOT NULL,
+  enabled TINYINT UNSIGNED NOT NULL DEFAULT 0,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  INDEX idx_tenant (tenant_id)
+  UNIQUE KEY uk_role_module (role, module_key),
+  INDEX idx_role (role)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Teams (optional grouping)
@@ -75,6 +67,7 @@ CREATE TABLE IF NOT EXISTS agent_status (
   queue_name VARCHAR(64) DEFAULT NULL,
   status VARCHAR(32) NOT NULL DEFAULT 'LOGGEDIN',
   break_name VARCHAR(64) DEFAULT NULL,
+  break_started_at DATETIME DEFAULT NULL,
   call_id VARCHAR(64) DEFAULT NULL,
   call_type VARCHAR(32) DEFAULT NULL,
   calls_taken INT UNSIGNED NOT NULL DEFAULT 0,
@@ -84,6 +77,7 @@ CREATE TABLE IF NOT EXISTS agent_status (
   last_customer_number VARCHAR(32) DEFAULT NULL,
   last_cli VARCHAR(32) DEFAULT NULL,
   extension_number VARCHAR(32) DEFAULT NULL,
+  session_started_at DATETIME DEFAULT NULL,
   timestamp DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   UNIQUE KEY uk_agent (agent_id),
   INDEX idx_tenant_status (tenant_id, status),
@@ -141,6 +135,18 @@ CREATE TABLE IF NOT EXISTS call_status (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- =============================================================================
+-- TENANTS (company / organization names for multi-tenant)
+-- =============================================================================
+
+CREATE TABLE IF NOT EXISTS tenants (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(128) NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_name (name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- =============================================================================
 -- PBX CONFIG (Asterisk: sip extensions, trunks, queues, dialplan concepts)
 -- =============================================================================
 
@@ -155,10 +161,14 @@ CREATE TABLE IF NOT EXISTS sip_extensions (
   port INT UNSIGNED DEFAULT NULL,
   dtmfmode VARCHAR(16) DEFAULT NULL,
   type VARCHAR(16) DEFAULT 'friend',
+  agent_user_id INT UNSIGNED DEFAULT NULL,
+  failover_destination_type VARCHAR(32) DEFAULT 'hangup',
+  failover_destination_id INT UNSIGNED DEFAULT NULL,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   UNIQUE KEY uk_tenant_name (tenant_id, name),
-  INDEX idx_tenant (tenant_id)
+  INDEX idx_tenant (tenant_id),
+  INDEX idx_agent_user (agent_user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS sip_trunks (
@@ -187,6 +197,8 @@ CREATE TABLE IF NOT EXISTS queues (
   display_name VARCHAR(128) DEFAULT NULL,
   strategy VARCHAR(32) DEFAULT 'ringall',
   timeout INT UNSIGNED DEFAULT 60,
+  failover_destination_type VARCHAR(32) DEFAULT 'hangup',
+  failover_destination_id INT UNSIGNED DEFAULT NULL,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   UNIQUE KEY uk_tenant_name (tenant_id, name),
@@ -246,6 +258,17 @@ CREATE TABLE IF NOT EXISTS ivr_menus (
   INDEX idx_tenant (tenant_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS ivr_menu_options (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  ivr_menu_id INT UNSIGNED NOT NULL,
+  dtmf_key VARCHAR(4) NOT NULL,
+  destination_type VARCHAR(32) NOT NULL DEFAULT 'hangup',
+  destination_id INT UNSIGNED DEFAULT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uk_menu_key (ivr_menu_id, dtmf_key),
+  INDEX idx_menu (ivr_menu_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS time_groups (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   tenant_id INT UNSIGNED NOT NULL,
@@ -271,6 +294,10 @@ CREATE TABLE IF NOT EXISTS time_conditions (
   tenant_id INT UNSIGNED NOT NULL,
   name VARCHAR(64) NOT NULL,
   time_group_id INT UNSIGNED DEFAULT NULL,
+  match_destination_type VARCHAR(32) DEFAULT 'hangup',
+  match_destination_id INT UNSIGNED DEFAULT NULL,
+  nomatch_destination_type VARCHAR(32) DEFAULT 'hangup',
+  nomatch_destination_id INT UNSIGNED DEFAULT NULL,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   INDEX idx_tenant (tenant_id)
@@ -420,4 +447,19 @@ CREATE TABLE IF NOT EXISTS agent_extension_usage (
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   UNIQUE KEY uk_extension (extension_id),
   INDEX idx_user (user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- CRM customers (for agent lookup by customer_id)
+CREATE TABLE IF NOT EXISTS crm_customers (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  tenant_id INT UNSIGNED NOT NULL,
+  customer_id VARCHAR(64) NOT NULL,
+  name VARCHAR(128) DEFAULT NULL,
+  phone VARCHAR(32) DEFAULT NULL,
+  email VARCHAR(255) DEFAULT NULL,
+  notes TEXT DEFAULT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uk_tenant_customer (tenant_id, customer_id),
+  INDEX idx_tenant (tenant_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

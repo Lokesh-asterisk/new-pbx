@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import Layout from '../components/Layout';
 import './AgentExtensionSelect.css';
 
-const API_BASE = import.meta.env.VITE_API_URL || '';
+const API_BASE = import.meta.env.DEV ? '' : (import.meta.env.VITE_API_URL || '');
 
 async function apiFetch(path, options = {}) {
   const res = await fetch(`${API_BASE}${path}`, {
