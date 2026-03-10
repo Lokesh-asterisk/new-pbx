@@ -5,6 +5,7 @@
  */
 import express from 'express';
 import { query, queryOne } from '../db.js';
+import { csvEscape, fmtSec } from '../utils/csv.js';
 
 const router = express.Router();
 
@@ -70,21 +71,6 @@ function parseDateRange(req) {
     return { startDate: start_date, endDate: end_date };
   }
   return { startDate: date || today, endDate: date || today };
-}
-
-function fmtSec(s) {
-  const sec = Number(s) || 0;
-  const h = Math.floor(sec / 3600);
-  const m = Math.floor((sec % 3600) / 60);
-  const ss = sec % 60;
-  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(ss).padStart(2, '0')}`;
-}
-
-function csvEscape(s) {
-  if (s == null) return '';
-  const str = String(s);
-  if (/[,"\r\n]/.test(str)) return `"${str.replace(/"/g, '""')}"`;
-  return str;
 }
 
 // ──────────────────────────────────────────────────────────────

@@ -1,18 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Layout from '../components/Layout';
+import { apiFetch } from '../utils/api';
 import './AgentExtensionSelect.css';
-
-const API_BASE = import.meta.env.DEV ? '' : (import.meta.env.VITE_API_URL || '');
-
-async function apiFetch(path, options = {}) {
-  const res = await fetch(`${API_BASE}${path}`, {
-    ...options,
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json', ...options.headers },
-    cache: 'no-store',
-  });
-  return res;
-}
 
 const POLL_INTERVAL_MS = 1000;
 const POLL_TIMEOUT_MS = 120000; // 2 min
@@ -33,7 +22,7 @@ export default function AgentExtensionSelect({ onSelected }) {
     let cancelled = false;
     (async () => {
       try {
-        const res = await apiFetch('/api/agent/extensions');
+        const res = await apiFetch('/api/agent/extensions', { cache: 'no-store' });
         const data = await res.json().catch(() => ({}));
         if (cancelled) return;
         const list = Array.isArray(data.extensions) ? data.extensions : [];
@@ -104,7 +93,7 @@ export default function AgentExtensionSelect({ onSelected }) {
       const checkStatus = async () => {
         if (Date.now() > deadline) return;
         try {
-          const statusRes = await apiFetch('/api/agent/status');
+          const statusRes = await apiFetch('/api/agent/status', { cache: 'no-store' });
           const statusData = await statusRes.json().catch(() => ({}));
           const status = statusData.success ? String(statusData.agentStatus || '').trim() : '';
           if (status === 'LOGGEDIN') {

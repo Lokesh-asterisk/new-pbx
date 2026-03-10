@@ -3,17 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import AgentExtensionSelect from './AgentExtensionSelect';
 import { useAuth } from '../context/AuthContext';
+import { apiFetch, API_BASE } from '../utils/api';
+import { formatDurationMs } from '../utils/format';
 import './Agent.css';
-
-const API_BASE = import.meta.env.DEV ? '' : (import.meta.env.VITE_API_URL || '');
-async function apiFetch(path, options = {}) {
-  const res = await fetch(`${API_BASE}${path}`, {
-    ...options,
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json', ...options.headers },
-  });
-  return res;
-}
 
 const STATUS_OPTIONS = [
   { value: 'available', label: 'Available', color: '#22c55e' },
@@ -43,13 +35,6 @@ const PLACEHOLDER_OUTBOUND = {
   cli: '—',
   lastCall: '—',
 };
-
-function formatDuration(ms) {
-  const totalSeconds = Math.floor(Math.max(0, ms) / 1000);
-  const m = Math.floor(totalSeconds / 60);
-  const s = totalSeconds % 60;
-  return `${m}:${s.toString().padStart(2, '0')}`;
-}
 
 const AGENT_SESSION_START_KEY = 'agent_session_start';
 const AGENT_SESSION_BREAKS_KEY = 'agent_session_breaks';
@@ -176,7 +161,7 @@ export default function Agent() {
     if (!sessionStartTime) return;
     const tick = () => {
       const elapsed = Date.now() - sessionStartTime;
-      setLoginTimeDisplay(formatDuration(elapsed));
+      setLoginTimeDisplay(formatDurationMs(elapsed));
     };
     tick();
     const t = setInterval(tick, 1000);
@@ -676,7 +661,7 @@ export default function Agent() {
                     <span className="agent-active-call-dir">{activeCall.direction}</span>
                     <span className="agent-active-call-number">{activeCall.number}</span>
                     <span className="agent-active-call-duration">
-                      {formatDuration(Date.now() - activeCall.start)}
+                      {formatDurationMs(Date.now() - activeCall.start)}
                     </span>
                     {callState && (
                       <span className="agent-call-state">

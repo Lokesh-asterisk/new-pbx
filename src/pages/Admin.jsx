@@ -1,17 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
+import { apiFetch } from '../utils/api';
 import './Dashboard.css';
-
-const API_BASE = import.meta.env.DEV ? '' : (import.meta.env.VITE_API_URL || '');
-
-function api(path, options = {}) {
-  return fetch(`${API_BASE}${path}`, {
-    ...options,
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json', ...options.headers },
-  });
-}
 
 export default function Admin() {
   const navigate = useNavigate();
@@ -36,7 +27,7 @@ export default function Admin() {
   const loadStats = useCallback(async () => {
     setStatsError('');
     try {
-      const res = await api('/api/admin/stats');
+      const res = await apiFetch('/api/admin/stats');
       const out = await res.json().catch(() => ({}));
       if (res.ok && out.success) {
         setStats(out.stats || null);
@@ -51,7 +42,7 @@ export default function Admin() {
 
   const loadTenants = useCallback(async () => {
     try {
-      const res = await api('/api/admin/tenants');
+      const res = await apiFetch('/api/admin/tenants');
       const out = await res.json().catch(() => ({}));
       if (res.ok && out.success && Array.isArray(out.tenants)) {
         setTenants(out.tenants || []);
@@ -68,8 +59,8 @@ export default function Admin() {
     try {
       const didTfnUrl = `/api/admin/reports/did-tfn?date_from=${didTfnDateFrom}&date_to=${didTfnDateTo}${tenantId ? `&tenant_id=${tenantId}` : ''}`;
       const [cdrRes, didTfnRes] = await Promise.all([
-        api(`/api/admin/cdr?page=1&limit=50`),
-        api(didTfnUrl),
+        apiFetch(`/api/admin/cdr?page=1&limit=50`),
+        apiFetch(didTfnUrl),
       ]);
       const cdrOut = await cdrRes.json().catch(() => ({}));
       const didTfnOut = await didTfnRes.json().catch(() => ({}));
@@ -105,7 +96,7 @@ export default function Admin() {
     setBlacklistLoading(true);
     try {
       const url = tenantId ? `/api/admin/blacklist?tenant_id=${tenantId}` : '/api/admin/blacklist';
-      const res = await api(url);
+      const res = await apiFetch(url);
       const out = await res.json().catch(() => ({}));
       if (res.ok && out.success) {
         setBlacklist(out.list || []);
@@ -134,7 +125,7 @@ export default function Admin() {
         setBlacklistError('Select a tenant first');
         return;
       }
-      const res = await api('/api/admin/blacklist', {
+      const res = await apiFetch('/api/admin/blacklist', {
         method: 'POST',
         body: JSON.stringify({ tenant_id: Number(tid), number: num }),
       });
@@ -156,7 +147,7 @@ export default function Admin() {
     setBlacklistDeleteLoading(id);
     setBlacklistError('');
     try {
-      const res = await api(`/api/admin/blacklist/${id}`, { method: 'DELETE' });
+      const res = await apiFetch(`/api/admin/blacklist/${id}`, { method: 'DELETE' });
       const out = await res.json().catch(() => ({}));
       if (res.ok && out.success) {
         loadBlacklist();
@@ -387,7 +378,7 @@ export default function Admin() {
                       className="action-btn"
                       onClick={async () => {
                         try {
-                          const res = await api(
+                          const res = await apiFetch(
                             `/api/admin/reports/did-tfn?format=csv&date_from=${didTfnDateFrom}&date_to=${didTfnDateTo}${tenantId ? `&tenant_id=${tenantId}` : ''}`
                           );
                           if (!res.ok) return;
@@ -481,7 +472,7 @@ export default function Admin() {
                       className="action-btn"
                       onClick={async () => {
                         try {
-                          const res = await api('/api/admin/cdr?format=csv&limit=10000');
+                          const res = await apiFetch('/api/admin/cdr?format=csv&limit=10000');
                           if (!res.ok) return;
                           const blob = await res.blob();
                           const url = URL.createObjectURL(blob);

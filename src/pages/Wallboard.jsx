@@ -1,19 +1,10 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import Layout from '../components/Layout';
 import { useAuth } from '../context/AuthContext';
+import { apiFetch, API_BASE } from '../utils/api';
+import { formatDuration, formatAht } from '../utils/format';
 import './Dashboard.css';
 import './Wallboard.css';
-
-const API_BASE = import.meta.env.DEV ? '' : (import.meta.env.VITE_API_URL || '');
-
-
-function api(path, options = {}) {
-  return fetch(`${API_BASE}${path}`, {
-    ...options,
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json', ...options.headers },
-  });
-}
 
 const STATUS_COLORS = {
   READY: '#22c55e',
@@ -39,21 +30,6 @@ const STATUS_LABELS = {
   LOGGED_OUT: 'Logged Out',
 };
 
-function formatDurationSec(totalSec) {
-  if (!totalSec || totalSec <= 0) return '0:00';
-  const h = Math.floor(totalSec / 3600);
-  const m = Math.floor((totalSec % 3600) / 60);
-  const s = totalSec % 60;
-  if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-  return `${m}:${String(s).padStart(2, '0')}`;
-}
-
-function formatAht(sec) {
-  if (!sec || sec <= 0) return '-';
-  const m = Math.floor(sec / 60);
-  const s = sec % 60;
-  return `${m}:${String(s).padStart(2, '0')}`;
-}
 
 function WallboardBreakDuration({ breakStartedAt }) {
   const [elapsed, setElapsed] = useState(() =>
@@ -66,7 +42,7 @@ function WallboardBreakDuration({ breakStartedAt }) {
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
   }, [breakStartedAt]);
-  return <span className="wb-mono">{formatDurationSec(elapsed)}</span>;
+  return <span className="wb-mono">{formatDuration(elapsed)}</span>;
 }
 
 export default function Wallboard() {
@@ -116,7 +92,7 @@ export default function Wallboard() {
       return;
     }
     try {
-      const res = await api('/api/wallboard/tenants');
+      const res = await apiFetch('/api/wallboard/tenants');
       const out = await res.json().catch(() => ({}));
       if (res.ok && out.success && Array.isArray(out.tenants)) {
         const list = out.tenants || [];
@@ -132,7 +108,7 @@ export default function Wallboard() {
     setError('');
     const url = tenantId ? `/api/wallboard/summary?tenant_id=${tenantId}` : '/api/wallboard/summary';
     try {
-      const res = await api(url);
+      const res = await apiFetch(url);
       const out = await res.json().catch(() => ({}));
       loadAttemptedRef.current = true;
       if (!res.ok) {
@@ -259,7 +235,7 @@ export default function Wallboard() {
     setMonitorError('');
     setMonitorLoading(`${agentId}-${mode}`);
     try {
-      const res = await api('/api/wallboard/monitor', {
+      const res = await apiFetch('/api/wallboard/monitor', {
         method: 'POST',
         body: JSON.stringify({ agent_id: agentId, mode, supervisor_extension: supervisorExt.trim() }),
       });
@@ -284,7 +260,7 @@ export default function Wallboard() {
       const url = tenantId
         ? `/api/wallboard/agents/${encodeURIComponent(agent.agent_id)}/detail?tenant_id=${tenantId}`
         : `/api/wallboard/agents/${encodeURIComponent(agent.agent_id)}/detail`;
-      const res = await api(url);
+      const res = await apiFetch(url);
       const out = await res.json().catch(() => ({}));
       if (res.ok && out.success) {
         setAgentDetail(out);
@@ -304,7 +280,7 @@ export default function Wallboard() {
       const url = tenantId
         ? `/api/wallboard/report?tenant_id=${tenantId}&date=${reportDate}`
         : `/api/wallboard/report?date=${reportDate}`;
-      const res = await api(url);
+      const res = await apiFetch(url);
       const out = await res.json().catch(() => ({}));
       if (res.ok && out.success) setReportData(out);
       else setReportData(null);
@@ -480,7 +456,7 @@ export default function Wallboard() {
                 <span className="wb-metric-label">Avg Wait</span>
               </div>
               <div className="wb-metric wb-metric-warning">
-                <span className="wb-metric-value">{formatDurationSec(stats.longest_waiting_sec ?? 0)}</span>
+                <span className="wb-metric-value">{formatDuration(stats.longest_waiting_sec ?? 0)}</span>
                 <span className="wb-metric-label">Longest Wait</span>
               </div>
               <div className="wb-metric wb-metric-info">
@@ -605,8 +581,8 @@ export default function Wallboard() {
                           </td>
                           <td>{isOnCall ? (a.customer_number || '-') : '-'}</td>
                           <td>{isOnCall ? (a.did_tfn || '-') : '-'}</td>
-                          <td className="wb-mono">{dur != null ? formatDurationSec(dur) : '-'}</td>
-                          <td className="wb-mono">{loginDur != null ? formatDurationSec(loginDur) : '-'}</td>
+                          <td className="wb-mono">{dur != null ? formatDuration(dur) : '-'}</td>
+                          <td className="wb-mono">{loginDur != null ? formatDuration(loginDur) : '-'}</td>
                           <td className="wb-mono">
                             {a.break_started_at ? <WallboardBreakDuration breakStartedAt={a.break_started_at} /> : '-'}
                           </td>
@@ -698,10 +674,10 @@ export default function Wallboard() {
                     <div className="wb-detail-stats">
                       <div className="wb-detail-stat"><span className="wb-detail-stat-label">Calls Handled</span><span className="wb-detail-stat-value">{agentDetail.callsHandled}</span></div>
                       <div className="wb-detail-stat"><span className="wb-detail-stat-label">Calls Missed</span><span className="wb-detail-stat-value">{agentDetail.callsMissed}</span></div>
-                      <div className="wb-detail-stat"><span className="wb-detail-stat-label">Avg Talk Time</span><span className="wb-detail-stat-value">{formatDurationSec(agentDetail.avgTalkTime)}</span></div>
-                      <div className="wb-detail-stat"><span className="wb-detail-stat-label">Total Talk</span><span className="wb-detail-stat-value">{formatDurationSec(agentDetail.totalTalkTime)}</span></div>
-                      <div className="wb-detail-stat"><span className="wb-detail-stat-label">Wrap Time</span><span className="wb-detail-stat-value">{formatDurationSec(agentDetail.totalWrapTime)}</span></div>
-                      <div className="wb-detail-stat"><span className="wb-detail-stat-label">Total Pause</span><span className="wb-detail-stat-value">{formatDurationSec(agentDetail.totalPauseTime)}</span></div>
+                      <div className="wb-detail-stat"><span className="wb-detail-stat-label">Avg Talk Time</span><span className="wb-detail-stat-value">{formatDuration(agentDetail.avgTalkTime)}</span></div>
+                      <div className="wb-detail-stat"><span className="wb-detail-stat-label">Total Talk</span><span className="wb-detail-stat-value">{formatDuration(agentDetail.totalTalkTime)}</span></div>
+                      <div className="wb-detail-stat"><span className="wb-detail-stat-label">Wrap Time</span><span className="wb-detail-stat-value">{formatDuration(agentDetail.totalWrapTime)}</span></div>
+                      <div className="wb-detail-stat"><span className="wb-detail-stat-label">Total Pause</span><span className="wb-detail-stat-value">{formatDuration(agentDetail.totalPauseTime)}</span></div>
                       <div className="wb-detail-stat"><span className="wb-detail-stat-label">AHT</span><span className="wb-detail-stat-value">{formatAht(agentDetail.aht)}</span></div>
                       <div className="wb-detail-stat"><span className="wb-detail-stat-label">Occupancy</span><span className="wb-detail-stat-value">{agentDetail.occupancy != null ? `${Math.round((agentDetail.occupancy ?? 0) * 100)}%` : '-'}</span></div>
                     </div>
@@ -728,7 +704,7 @@ export default function Wallboard() {
                               <tr key={i}>
                                 <td>{p.start_time ? new Date(p.start_time).toLocaleTimeString() : '-'}</td>
                                 <td>{p.break_name || 'Break'}</td>
-                                <td>{formatDurationSec(p.duration_sec)}</td>
+                                <td>{formatDuration(p.duration_sec)}</td>
                               </tr>
                             ))}
                           </tbody>
@@ -749,7 +725,7 @@ export default function Wallboard() {
                                 <td>{c.direction === 'inbound' ? c.source_number : c.destination_number}</td>
                                 <td>{c.did_tfn || '-'}</td>
                                 <td>{c.queue_name || '-'}</td>
-                                <td>{formatDurationSec(c.talk_sec || 0)}</td>
+                                <td>{formatDuration(c.talk_sec || 0)}</td>
                                 <td>{c.status}</td>
                               </tr>
                             ))}
@@ -875,9 +851,9 @@ export default function Wallboard() {
                 <span className="wb-report-kpi" title="Calls not answered"><strong>{reportData.summary.total_calls_missed ?? 0}</strong> Missed</span>
                 <span className="wb-report-kpi" title="Average handle time"><strong>{reportData.summary.avg_aht_sec != null ? formatAht(reportData.summary.avg_aht_sec) : '-'}</strong> Avg AHT</span>
                 <span className="wb-report-kpi" title="Average occupancy (talk+wrap vs login)"><strong>{reportData.summary.avg_occupancy != null ? `${Math.round(reportData.summary.avg_occupancy * 100)}%` : '-'}</strong> Avg Occupancy</span>
-                <span className="wb-report-kpi" title="Total login time"><strong>{formatDurationSec(reportData.summary.total_login_sec)}</strong> Login</span>
-                <span className="wb-report-kpi" title="Total talk time"><strong>{formatDurationSec(reportData.summary.total_talk_sec)}</strong> Talk</span>
-                <span className="wb-report-kpi" title="Total wrap / ACW"><strong>{formatDurationSec(reportData.summary.total_wrap_sec)}</strong> Wrap</span>
+                <span className="wb-report-kpi" title="Total login time"><strong>{formatDuration(reportData.summary.total_login_sec)}</strong> Login</span>
+                <span className="wb-report-kpi" title="Total talk time"><strong>{formatDuration(reportData.summary.total_talk_sec)}</strong> Talk</span>
+                <span className="wb-report-kpi" title="Total wrap / ACW"><strong>{formatDuration(reportData.summary.total_wrap_sec)}</strong> Wrap</span>
                 <span className="wb-report-kpi" title="Agents with activity"><strong>{reportData.summary.agent_count ?? 0}</strong> Agents</span>
               </div>
             )}
@@ -906,11 +882,11 @@ export default function Wallboard() {
                         <span className="wb-agent-name-line">{a.name || '-'}</span>
                         <span className="wb-agent-ext-line">{a.agent_id || '-'}</span>
                       </td>
-                      <td className="wb-mono">{formatDurationSec(a.login_time)}</td>
-                      <td className="wb-mono">{formatDurationSec(a.productive_time ?? Math.max(0, (a.login_time || 0) - (a.total_pause_time || 0)))}</td>
-                      <td className="wb-mono">{formatDurationSec(a.total_talk_time)}</td>
-                      <td className="wb-mono">{formatDurationSec(a.total_wrap_time)}</td>
-                      <td className="wb-mono">{formatDurationSec(a.total_pause_time)}</td>
+                      <td className="wb-mono">{formatDuration(a.login_time)}</td>
+                      <td className="wb-mono">{formatDuration(a.productive_time ?? Math.max(0, (a.login_time || 0) - (a.total_pause_time || 0)))}</td>
+                      <td className="wb-mono">{formatDuration(a.total_talk_time)}</td>
+                      <td className="wb-mono">{formatDuration(a.total_wrap_time)}</td>
+                      <td className="wb-mono">{formatDuration(a.total_pause_time)}</td>
                       <td className="wb-mono">{a.calls_handled ?? 0}</td>
                       <td className="wb-mono">{a.calls_missed ?? 0}</td>
                       <td className="wb-mono">{formatAht(a.aht)}</td>

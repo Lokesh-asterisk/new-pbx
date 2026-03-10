@@ -1,6 +1,15 @@
 /**
- * Shared CSV utilities for report exports.
+ * Shared CSV and formatting utilities for report exports.
  */
+
+export function fmtSec(s) {
+  const sec = Number(s) || 0;
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const ss = sec % 60;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(ss).padStart(2, '0')}`;
+}
+
 export function csvEscape(s) {
   if (s == null) return '';
   const str = String(s);

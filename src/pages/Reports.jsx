@@ -6,6 +6,7 @@ import {
 } from 'recharts';
 import Layout from '../components/Layout';
 import { API_BASE, apiJson as apiFetch } from '../utils/api.js';
+import { formatSecPadded, formatSecCompact } from '../utils/format.js';
 import './Reports.css';
 
 const TABS = [
@@ -22,23 +23,6 @@ const TABS = [
 
 const COLORS = ['#3b82f6', '#22c55e', '#f59e0b', '#ef4444', '#a855f7', '#06b6d4', '#ec4899', '#84cc16'];
 const PIE_COLORS = { talk: '#3b82f6', ready: '#22c55e', wrap: '#a855f7', pause: '#f59e0b' };
-
-function fmtSec(s) {
-  const sec = Number(s) || 0;
-  const h = Math.floor(sec / 3600);
-  const m = Math.floor((sec % 3600) / 60);
-  const ss = sec % 60;
-  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(ss).padStart(2, '0')}`;
-}
-
-function fmtSecShort(s) {
-  const sec = Number(s) || 0;
-  if (sec < 60) return `${sec}s`;
-  if (sec < 3600) return `${Math.floor(sec / 60)}m`;
-  const h = Math.floor(sec / 3600);
-  const m = Math.floor((sec % 3600) / 60);
-  return m > 0 ? `${h}h ${m}m` : `${h}h`;
-}
 
 export default function Reports() {
   const [tab, setTab] = useState('performance');
@@ -278,7 +262,7 @@ function PerformanceTab({ data, scoreClass }) {
         <div className="rpt-kpi rpt-kpi-blue"><div className="rpt-kpi-value">{totalCalls}</div><div className="rpt-kpi-label">Calls Answered</div></div>
         <div className="rpt-kpi rpt-kpi-red"><div className="rpt-kpi-value">{totalMissed}</div><div className="rpt-kpi-label">Calls Missed</div></div>
         <div className="rpt-kpi rpt-kpi-green"><div className="rpt-kpi-value">{avgOcc}%</div><div className="rpt-kpi-label">Avg Occupancy</div></div>
-        <div className="rpt-kpi rpt-kpi-amber"><div className="rpt-kpi-value">{fmtSec(avgAht)}</div><div className="rpt-kpi-label">Avg Handle Time</div></div>
+        <div className="rpt-kpi rpt-kpi-amber"><div className="rpt-kpi-value">{formatSecPadded(avgAht)}</div><div className="rpt-kpi-label">Avg Handle Time</div></div>
         <div className="rpt-kpi rpt-kpi-purple"><div className="rpt-kpi-value">{agents.length}</div><div className="rpt-kpi-label">Active Agents</div></div>
       </div>
 
@@ -413,7 +397,7 @@ function BreakTab({ data }) {
                     <td>{b.count}</td>
                     <td className="rpt-mono">{b.total_duration}</td>
                     <td className="rpt-mono">{b.avg_duration}</td>
-                    <td className="rpt-mono">{fmtSec(b.max_duration_sec)}</td>
+                    <td className="rpt-mono">{formatSecPadded(b.max_duration_sec)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -456,7 +440,7 @@ function TimeDistributionTab({ data, tooltipStyle }) {
                 label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
                 {pieData.map((d, i) => <Cell key={i} fill={d.color} />)}
               </Pie>
-              <Tooltip contentStyle={tooltipStyle} formatter={(v) => fmtSecShort(v)} />
+              <Tooltip contentStyle={tooltipStyle} formatter={(v) => formatSecCompact(v)} />
             </PieChart>
           </ResponsiveContainer>
         </div>
@@ -552,8 +536,8 @@ function TrendsTab({ data, tooltipStyle }) {
             <LineChart data={rows} margin={{ left: 10, right: 10, top: 5, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
               <XAxis dataKey="date" stroke="#64748b" tick={{ fontSize: 11 }} />
-              <YAxis stroke="#64748b" tickFormatter={v => fmtSecShort(v)} />
-              <Tooltip contentStyle={tooltipStyle} formatter={(v) => fmtSecShort(v)} />
+              <YAxis stroke="#64748b" tickFormatter={v => formatSecCompact(v)} />
+              <Tooltip contentStyle={tooltipStyle} formatter={(v) => formatSecCompact(v)} />
               <Legend />
               <Line type="monotone" dataKey="talk_time_sec" stroke="#3b82f6" name="Talk Time" strokeWidth={2} dot={{ r: 3 }} />
               <Line type="monotone" dataKey="pause_time_sec" stroke="#f59e0b" name="Pause Time" strokeWidth={2} dot={{ r: 3 }} />
@@ -602,8 +586,8 @@ function HourlyTab({ data, tooltipStyle }) {
                   <td>{r.label}</td>
                   <td>{r.calls_answered}</td>
                   <td>{r.calls_missed}</td>
-                  <td className="rpt-mono">{fmtSec(r.talk_time_sec)}</td>
-                  <td className="rpt-mono">{fmtSec(r.pause_time_sec)}</td>
+                  <td className="rpt-mono">{formatSecPadded(r.talk_time_sec)}</td>
+                  <td className="rpt-mono">{formatSecPadded(r.pause_time_sec)}</td>
                 </tr>
               ))}
             </tbody>

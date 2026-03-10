@@ -2,18 +2,10 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Layout from '../components/Layout';
 import { useAuth } from '../context/AuthContext';
+import { apiFetch, API_BASE } from '../utils/api';
+import { formatDurationVerbose, formatSecVerbose } from '../utils/format';
 import './Dashboard.css';
 import './SuperAdmin.css';
-
-const API_BASE = import.meta.env.DEV ? '' : (import.meta.env.VITE_API_URL || '');
-
-function api(path, options = {}) {
-  return fetch(`${API_BASE}${path}`, {
-    ...options,
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json', ...options.headers },
-  });
-}
 
 const ROLES = ['superadmin', 'admin', 'user', 'agent'];
 
@@ -248,7 +240,7 @@ export default function SuperAdmin() {
 
   const loadTenants = useCallback(async () => {
     try {
-      const res = await api('/api/superadmin/tenants');
+      const res = await apiFetch('/api/superadmin/tenants');
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.success) setTenants(data.tenants || []);
     } catch {
@@ -260,7 +252,7 @@ export default function SuperAdmin() {
     setLoading(true);
     setError('');
     try {
-      const res = await api('/api/superadmin/users');
+      const res = await apiFetch('/api/superadmin/users');
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.success) setUsers(data.users || []);
       else setError(data.error || 'Failed to load users');
@@ -275,7 +267,7 @@ export default function SuperAdmin() {
     setLoading(true);
     setError('');
     try {
-      const res = await api('/api/superadmin/sip-extensions');
+      const res = await apiFetch('/api/superadmin/sip-extensions');
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.success) setExtensions(data.extensions || []);
       else setError(data.error || 'Failed to load SIP extensions');
@@ -288,7 +280,7 @@ export default function SuperAdmin() {
 
   const loadStats = useCallback(async () => {
     try {
-      const res = await api('/api/superadmin/stats');
+      const res = await apiFetch('/api/superadmin/stats');
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.success) setStats(data.stats || null);
     } catch {
@@ -301,7 +293,7 @@ export default function SuperAdmin() {
       const url = liveAgentTenantId && liveAgentTenantId !== 'all'
         ? `/api/superadmin/live-agents?tenant_id=${liveAgentTenantId}`
         : '/api/superadmin/live-agents';
-      const res = await api(url);
+      const res = await apiFetch(url);
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.success) {
         setLiveAgents(data.agents || []);
@@ -316,7 +308,7 @@ export default function SuperAdmin() {
   const handleLiveAgentMonitor = useCallback(async (agentId, mode) => {
     const ext = (liveAgentSupervisorExt || '').trim();
     if (!ext) throw new Error('Supervisor extension required');
-    const res = await api(`/api/superadmin/live-agents/${encodeURIComponent(agentId)}/monitor`, {
+    const res = await apiFetch(`/api/superadmin/live-agents/${encodeURIComponent(agentId)}/monitor`, {
       method: 'POST',
       body: JSON.stringify({ mode, supervisor_extension: ext }),
     });
@@ -339,7 +331,7 @@ export default function SuperAdmin() {
       if (cdrStatus) q.set('status', cdrStatus);
       q.set('page', String(pageToUse));
       q.set('limit', '25');
-      const res = await api(`/api/superadmin/cdr?${q.toString()}`);
+      const res = await apiFetch(`/api/superadmin/cdr?${q.toString()}`);
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.success) {
         setCdrList(Array.isArray(data.list) ? data.list : []);
@@ -374,7 +366,7 @@ export default function SuperAdmin() {
       if (cdrQueue) q.set('queue', cdrQueue);
       if (cdrDirection) q.set('direction', cdrDirection);
       if (cdrStatus) q.set('status', cdrStatus);
-      const res = await api(`/api/superadmin/cdr?${q.toString()}`);
+      const res = await apiFetch(`/api/superadmin/cdr?${q.toString()}`);
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         alert(data.error || `Download failed (${res.status})`);
@@ -402,7 +394,7 @@ export default function SuperAdmin() {
       q.set('date_from', didTfnDateFrom);
       q.set('date_to', didTfnDateTo);
       if (didTfnTenantId && didTfnTenantId !== 'all') q.set('tenant_id', didTfnTenantId);
-      const res = await api(`/api/superadmin/reports/did-tfn?${q.toString()}`);
+      const res = await apiFetch(`/api/superadmin/reports/did-tfn?${q.toString()}`);
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.success) setDidTfnReport(Array.isArray(data.report) ? data.report : []);
       else setDidTfnReport([]);
@@ -420,7 +412,7 @@ export default function SuperAdmin() {
       q.set('date_from', didTfnDateFrom);
       q.set('date_to', didTfnDateTo);
       if (didTfnTenantId && didTfnTenantId !== 'all') q.set('tenant_id', didTfnTenantId);
-      const res = await api(`/api/superadmin/reports/did-tfn?${q.toString()}`);
+      const res = await apiFetch(`/api/superadmin/reports/did-tfn?${q.toString()}`);
       if (!res.ok) return;
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
@@ -438,7 +430,7 @@ export default function SuperAdmin() {
     setLoading(true);
     setError('');
     try {
-      const res = await api('/api/superadmin/sip-trunks');
+      const res = await apiFetch('/api/superadmin/sip-trunks');
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.success) setTrunks(data.trunks || []);
       else setError(data.error || 'Failed to load trunks');
@@ -453,7 +445,7 @@ export default function SuperAdmin() {
     setLoading(true);
     setError('');
     try {
-      const res = await api('/api/superadmin/campaigns');
+      const res = await apiFetch('/api/superadmin/campaigns');
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.success) setCampaigns(data.campaigns || []);
       else setError(data.error || 'Failed to load campaigns');
@@ -468,7 +460,7 @@ export default function SuperAdmin() {
     setLoading(true);
     setError('');
     try {
-      const res = await api('/api/superadmin/inbound-routes');
+      const res = await apiFetch('/api/superadmin/inbound-routes');
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.success) setInboundRoutes(data.routes || []);
       else setError(data.error || 'Failed to load inbound routes');
@@ -483,7 +475,7 @@ export default function SuperAdmin() {
     setLoading(true);
     setError('');
     try {
-      const res = await api('/api/superadmin/outbound-routes');
+      const res = await apiFetch('/api/superadmin/outbound-routes');
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.success) setOutboundRoutes(data.routes || []);
       else setError(data.error || 'Failed to load outbound routes');
@@ -498,7 +490,7 @@ export default function SuperAdmin() {
     setLoading(true);
     setError('');
     try {
-      const res = await api('/api/superadmin/queues');
+      const res = await apiFetch('/api/superadmin/queues');
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.success) setQueues(data.queues || []);
       else setError(data.error || 'Failed to load queues');
@@ -512,7 +504,7 @@ export default function SuperAdmin() {
   const loadQueueMembers = useCallback(async (queueId) => {
     if (!queueId) return;
     try {
-      const res = await api(`/api/superadmin/queues/${queueId}/members`);
+      const res = await apiFetch(`/api/superadmin/queues/${queueId}/members`);
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.success) setQueueMembers(data.members || []);
       else setQueueMembers([]);
@@ -525,7 +517,7 @@ export default function SuperAdmin() {
     setLoading(true);
     setError('');
     try {
-      const res = await api('/api/superadmin/ivr-menus');
+      const res = await apiFetch('/api/superadmin/ivr-menus');
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.success) setIvrMenus(data.menus || []);
       else setError(data.error || 'Failed to load IVR menus');
@@ -535,7 +527,7 @@ export default function SuperAdmin() {
 
   const loadTimeGroups = useCallback(async () => {
     try {
-      const res = await api('/api/superadmin/time-groups');
+      const res = await apiFetch('/api/superadmin/time-groups');
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.success) setTimeGroups(data.groups || []);
     } catch { setTimeGroups([]); }
@@ -545,7 +537,7 @@ export default function SuperAdmin() {
     setLoading(true);
     setError('');
     try {
-      const res = await api('/api/superadmin/time-conditions');
+      const res = await apiFetch('/api/superadmin/time-conditions');
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.success) setTimeConditions(data.conditions || []);
       else setError(data.error || 'Failed to load time conditions');
@@ -557,7 +549,7 @@ export default function SuperAdmin() {
     setLoading(true);
     setError('');
     try {
-      const res = await api('/api/superadmin/sound-files');
+      const res = await apiFetch('/api/superadmin/sound-files');
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.success) setSoundFiles(data.files || []);
       else setError(data.error || 'Failed to load sound files');
@@ -569,7 +561,7 @@ export default function SuperAdmin() {
     setLoading(true);
     setError('');
     try {
-      const res = await api('/api/superadmin/voicemail-boxes');
+      const res = await apiFetch('/api/superadmin/voicemail-boxes');
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.success) setVoicemailBoxes(data.boxes || []);
       else setError(data.error || 'Failed to load voicemail boxes');
@@ -582,7 +574,7 @@ export default function SuperAdmin() {
     setBlacklistLoading(true);
     try {
       const url = blacklistTenantId ? `/api/admin/blacklist?tenant_id=${blacklistTenantId}` : '/api/admin/blacklist';
-      const res = await api(url);
+      const res = await apiFetch(url);
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.success) setBlacklistList(data.list || []);
       else setBlacklistError(data.error || 'Failed to load blacklist');
@@ -926,7 +918,7 @@ export default function SuperAdmin() {
     setBlacklistAddLoading(true);
     setBlacklistError('');
     try {
-      const res = await api('/api/admin/blacklist', { method: 'POST', body: JSON.stringify({ tenant_id: Number(tid), number: num }) });
+      const res = await apiFetch('/api/admin/blacklist', { method: 'POST', body: JSON.stringify({ tenant_id: Number(tid), number: num }) });
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.success) { setBlacklistAddNumber(''); loadBlacklist(); }
       else setBlacklistError(data.error || 'Failed to add');
@@ -938,7 +930,7 @@ export default function SuperAdmin() {
     setBlacklistDeleteLoading(id);
     setBlacklistError('');
     try {
-      const res = await api(`/api/admin/blacklist/${id}`, { method: 'DELETE' });
+      const res = await apiFetch(`/api/admin/blacklist/${id}`, { method: 'DELETE' });
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.success) loadBlacklist();
       else setBlacklistError(data.error || 'Failed to delete');
@@ -979,7 +971,7 @@ export default function SuperAdmin() {
         body.phone_login_number = phone_login_number;
         body.phone_login_password = phone_login_password;
       }
-      const res = await api('/api/superadmin/users', {
+      const res = await apiFetch('/api/superadmin/users', {
         method: 'POST',
         body: JSON.stringify(body),
       });
@@ -1061,7 +1053,7 @@ export default function SuperAdmin() {
         body.phone_login_password = editPhonePassword || undefined;
         if (editWebPassword.trim() !== '') body.password = editWebPassword;
       }
-      const res = await api(`/api/superadmin/users/${editingUser.id}`, {
+      const res = await apiFetch(`/api/superadmin/users/${editingUser.id}`, {
         method: 'PATCH',
         body: JSON.stringify(body),
       });
@@ -1097,7 +1089,7 @@ export default function SuperAdmin() {
     }
     setLoading(true);
     try {
-      const res = await api('/api/superadmin/sip-extensions', {
+      const res = await apiFetch('/api/superadmin/sip-extensions', {
         method: 'POST',
         body: JSON.stringify({
           tenant_id, name, secret, context, host, type,
@@ -1153,7 +1145,7 @@ export default function SuperAdmin() {
         failover_destination_id: editExtFailoverId ? parseInt(editExtFailoverId, 10) : null,
       };
       if (editExtSecret.trim() !== '') body.secret = editExtSecret.trim();
-      const res = await api(`/api/superadmin/sip-extensions/${editingExtension.id}`, {
+      const res = await apiFetch(`/api/superadmin/sip-extensions/${editingExtension.id}`, {
         method: 'PATCH',
         body: JSON.stringify(body),
       });
@@ -1184,7 +1176,7 @@ export default function SuperAdmin() {
     setError('');
     setLoading(true);
     try {
-      const res = await api(`/api/superadmin/users/${u.id}`, { method: 'DELETE' });
+      const res = await apiFetch(`/api/superadmin/users/${u.id}`, { method: 'DELETE' });
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.success) {
         loadUsers();
@@ -1206,7 +1198,7 @@ export default function SuperAdmin() {
     setError('');
     setLoading(true);
     try {
-      const res = await api(`/api/superadmin/users/${u.id}`, {
+      const res = await apiFetch(`/api/superadmin/users/${u.id}`, {
         method: 'PATCH',
         body: JSON.stringify({ account_status: nextStatus }),
       });
@@ -1228,7 +1220,7 @@ export default function SuperAdmin() {
     setError('');
     setLoading(true);
     try {
-      const res = await api('/api/superadmin/sync-asterisk', { method: 'POST' });
+      const res = await apiFetch('/api/superadmin/sync-asterisk', { method: 'POST' });
       const data = await res.json().catch(() => ({}));
       if (res.ok) {
         const msg = data.message || (data.success ? 'Synced.' : 'Sync skipped or failed.');
@@ -1253,7 +1245,7 @@ export default function SuperAdmin() {
     setError('');
     setLoading(true);
     try {
-      const res = await api(`/api/superadmin/sip-extensions/${extId}`, { method: 'DELETE' });
+      const res = await apiFetch(`/api/superadmin/sip-extensions/${extId}`, { method: 'DELETE' });
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.success) {
         loadExtensions();
@@ -1280,7 +1272,7 @@ export default function SuperAdmin() {
     }
     setLoading(true);
     try {
-      const res = await api('/api/superadmin/sip-trunks', {
+      const res = await apiFetch('/api/superadmin/sip-trunks', {
         method: 'POST',
         body: JSON.stringify({ tenant_id, trunk_name, config_json: peer_details }),
       });
@@ -1312,7 +1304,7 @@ export default function SuperAdmin() {
     }
     setLoading(true);
     try {
-      const res = await api(`/api/superadmin/sip-trunks/${editingTrunk.id}`, {
+      const res = await apiFetch(`/api/superadmin/sip-trunks/${editingTrunk.id}`, {
         method: 'PATCH',
         body: JSON.stringify({ trunk_name, config_json: peer_details }),
       });
@@ -1335,7 +1327,7 @@ export default function SuperAdmin() {
     setError('');
     setLoading(true);
     try {
-      const res = await api(`/api/superadmin/sip-trunks/${t.id}`, { method: 'DELETE' });
+      const res = await apiFetch(`/api/superadmin/sip-trunks/${t.id}`, { method: 'DELETE' });
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.success) loadTrunks();
       else setError(data.error || 'Failed to delete trunk');
@@ -1359,7 +1351,7 @@ export default function SuperAdmin() {
     }
     setLoading(true);
     try {
-      const res = await api('/api/superadmin/campaigns', {
+      const res = await apiFetch('/api/superadmin/campaigns', {
         method: 'POST',
         body: JSON.stringify({ tenant_id, name, description }),
       });
@@ -1389,7 +1381,7 @@ export default function SuperAdmin() {
     }
     setLoading(true);
     try {
-      const res = await api(`/api/superadmin/campaigns/${editingCampaign.id}`, {
+      const res = await apiFetch(`/api/superadmin/campaigns/${editingCampaign.id}`, {
         method: 'PATCH',
         body: JSON.stringify({ name, description }),
       });
@@ -1410,7 +1402,7 @@ export default function SuperAdmin() {
     setError('');
     setLoading(true);
     try {
-      const res = await api(`/api/superadmin/campaigns/${c.id}`, { method: 'DELETE' });
+      const res = await apiFetch(`/api/superadmin/campaigns/${c.id}`, { method: 'DELETE' });
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.success) loadCampaigns();
       else setError(data.error || 'Failed to delete campaign');
@@ -1431,7 +1423,7 @@ export default function SuperAdmin() {
     }
     setLoading(true);
     try {
-      const res = await api('/api/superadmin/tenants', { method: 'POST', body: JSON.stringify({ name }) });
+      const res = await apiFetch('/api/superadmin/tenants', { method: 'POST', body: JSON.stringify({ name }) });
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.success) {
         setShowCreateTenant(false);
@@ -1456,7 +1448,7 @@ export default function SuperAdmin() {
     }
     setLoading(true);
     try {
-      const res = await api(`/api/superadmin/tenants/${editingTenant.id}`, { method: 'PATCH', body: JSON.stringify({ name, mask_caller_number_agent: editTenantMaskCaller ? 1 : 0 }) });
+      const res = await apiFetch(`/api/superadmin/tenants/${editingTenant.id}`, { method: 'PATCH', body: JSON.stringify({ name, mask_caller_number_agent: editTenantMaskCaller ? 1 : 0 }) });
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.success) {
         setEditingTenant(null);
@@ -1476,7 +1468,7 @@ export default function SuperAdmin() {
     setError('');
     setLoading(true);
     try {
-      const res = await api(`/api/superadmin/tenants/${t.id}`, { method: 'DELETE' });
+      const res = await apiFetch(`/api/superadmin/tenants/${t.id}`, { method: 'DELETE' });
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.success) loadTenants();
       else setError(data.error || 'Failed to delete tenant');
@@ -1510,7 +1502,7 @@ export default function SuperAdmin() {
     }
     setLoading(true);
     try {
-      const res = await api('/api/superadmin/inbound-routes', {
+      const res = await apiFetch('/api/superadmin/inbound-routes', {
         method: 'POST',
         body: JSON.stringify({
           tenant_id,
@@ -1559,7 +1551,7 @@ export default function SuperAdmin() {
     }
     setLoading(true);
     try {
-      const res = await api(`/api/superadmin/inbound-routes/${editingInbound.id}`, {
+      const res = await apiFetch(`/api/superadmin/inbound-routes/${editingInbound.id}`, {
         method: 'PATCH',
         body: JSON.stringify({
           name: name || `DID ${did}`,
@@ -1588,7 +1580,7 @@ export default function SuperAdmin() {
     setError('');
     setLoading(true);
     try {
-      const res = await api(`/api/superadmin/inbound-routes/${r.id}`, { method: 'DELETE' });
+      const res = await apiFetch(`/api/superadmin/inbound-routes/${r.id}`, { method: 'DELETE' });
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.success) loadInboundRoutes();
       else setError(data.error || 'Failed to delete');
@@ -1604,7 +1596,7 @@ export default function SuperAdmin() {
     setError('');
     setLoading(true);
     try {
-      const res = await api('/api/superadmin/outbound-routes', {
+      const res = await apiFetch('/api/superadmin/outbound-routes', {
         method: 'PUT',
         body: JSON.stringify({ tenant_id: tenantId, trunk_id: trunkId }),
       });
@@ -1635,7 +1627,7 @@ export default function SuperAdmin() {
     const failover_destination_id = form.failover_destination_id?.value?.trim() || null;
     setLoading(true);
     try {
-      const res = await api('/api/superadmin/queues', {
+      const res = await apiFetch('/api/superadmin/queues', {
         method: 'POST',
         body: JSON.stringify({
           tenant_id, name, display_name, strategy, timeout: parseInt(timeout, 10),
@@ -1675,7 +1667,7 @@ export default function SuperAdmin() {
     }
     setLoading(true);
     try {
-      const res = await api(`/api/superadmin/queues/${editingQueue.id}`, {
+      const res = await apiFetch(`/api/superadmin/queues/${editingQueue.id}`, {
         method: 'PATCH',
         body: JSON.stringify({
           name, display_name, strategy, timeout: parseInt(timeout, 10),
@@ -1703,7 +1695,7 @@ export default function SuperAdmin() {
     setError('');
     setLoading(true);
     try {
-      const res = await api(`/api/superadmin/queues/${q.id}`, { method: 'DELETE' });
+      const res = await apiFetch(`/api/superadmin/queues/${q.id}`, { method: 'DELETE' });
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.success) {
         loadQueues();
@@ -1722,7 +1714,7 @@ export default function SuperAdmin() {
     setError('');
     setLoading(true);
     try {
-      const res = await api(`/api/superadmin/queues/${selectedQueueId}/members`, {
+      const res = await apiFetch(`/api/superadmin/queues/${selectedQueueId}/members`, {
         method: 'POST',
         body: JSON.stringify({ member_name: newMemberName.trim() }),
       });
@@ -1743,7 +1735,7 @@ export default function SuperAdmin() {
     setError('');
     setLoading(true);
     try {
-      const res = await api(`/api/superadmin/queues/${queueId}/members/${encodeURIComponent(memberName)}`, { method: 'DELETE' });
+      const res = await apiFetch(`/api/superadmin/queues/${queueId}/members/${encodeURIComponent(memberName)}`, { method: 'DELETE' });
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.success) loadQueueMembers(queueId);
       else setError(data.error || 'Failed to remove member');
@@ -1789,7 +1781,7 @@ export default function SuperAdmin() {
     if (!tenant_id || !name) { setError('Tenant and IVR name required'); return; }
     setLoading(true);
     try {
-      const res = await api('/api/superadmin/ivr-menus', {
+      const res = await apiFetch('/api/superadmin/ivr-menus', {
         method: 'POST',
         body: JSON.stringify({
           tenant_id, name,
@@ -1817,7 +1809,7 @@ export default function SuperAdmin() {
     setError('');
     setLoading(true);
     try {
-      const res = await api(`/api/superadmin/ivr-menus/${editingIvr.id}`, {
+      const res = await apiFetch(`/api/superadmin/ivr-menus/${editingIvr.id}`, {
         method: 'PATCH',
         body: JSON.stringify({
           name,
@@ -1836,7 +1828,7 @@ export default function SuperAdmin() {
     if (!window.confirm(`Delete IVR "${m.name}"?`)) return;
     setError(''); setLoading(true);
     try {
-      const res = await api(`/api/superadmin/ivr-menus/${m.id}`, { method: 'DELETE' });
+      const res = await apiFetch(`/api/superadmin/ivr-menus/${m.id}`, { method: 'DELETE' });
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.success) loadIvrMenus();
       else setError(data.error || 'Failed to delete IVR');
@@ -1854,7 +1846,7 @@ export default function SuperAdmin() {
     if (!tenant_id || !name) { setError('Tenant and group name required'); return; }
     setLoading(true);
     try {
-      const res = await api('/api/superadmin/time-groups', {
+      const res = await apiFetch('/api/superadmin/time-groups', {
         method: 'POST',
         body: JSON.stringify({ tenant_id, name, rules: timeGroupRules.filter(r => r.day_of_week !== '' || r.start_time || r.end_time) }),
       });
@@ -1869,7 +1861,7 @@ export default function SuperAdmin() {
     if (!window.confirm(`Delete time group "${g.name}"?`)) return;
     setError(''); setLoading(true);
     try {
-      const res = await api(`/api/superadmin/time-groups/${g.id}`, { method: 'DELETE' });
+      const res = await apiFetch(`/api/superadmin/time-groups/${g.id}`, { method: 'DELETE' });
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.success) loadTimeGroups();
       else setError(data.error || 'Failed to delete time group');
@@ -1891,7 +1883,7 @@ export default function SuperAdmin() {
     if (!tenant_id || !name) { setError('Tenant and name required'); return; }
     setLoading(true);
     try {
-      const res = await api('/api/superadmin/time-conditions', {
+      const res = await apiFetch('/api/superadmin/time-conditions', {
         method: 'POST',
         body: JSON.stringify({ tenant_id, name, time_group_id: time_group_id ? parseInt(time_group_id, 10) : null, match_destination_type, match_destination_id: match_destination_id ? parseInt(match_destination_id, 10) : null, nomatch_destination_type, nomatch_destination_id: nomatch_destination_id ? parseInt(nomatch_destination_id, 10) : null }),
       });
@@ -1906,7 +1898,7 @@ export default function SuperAdmin() {
     if (!window.confirm(`Delete time condition "${tc.name}"?`)) return;
     setError(''); setLoading(true);
     try {
-      const res = await api(`/api/superadmin/time-conditions/${tc.id}`, { method: 'DELETE' });
+      const res = await apiFetch(`/api/superadmin/time-conditions/${tc.id}`, { method: 'DELETE' });
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.success) loadTimeConditions();
       else setError(data.error || 'Failed to delete time condition');
@@ -1925,7 +1917,7 @@ export default function SuperAdmin() {
     if (!tenant_id || !name || !file_path) { setError('Tenant, name, and file path required'); return; }
     setLoading(true);
     try {
-      const res = await api('/api/superadmin/sound-files', {
+      const res = await apiFetch('/api/superadmin/sound-files', {
         method: 'POST',
         body: JSON.stringify({ tenant_id, name, file_path }),
       });
@@ -1940,7 +1932,7 @@ export default function SuperAdmin() {
     if (!window.confirm(`Delete sound file "${s.name}"?`)) return;
     setError(''); setLoading(true);
     try {
-      const res = await api(`/api/superadmin/sound-files/${s.id}`, { method: 'DELETE' });
+      const res = await apiFetch(`/api/superadmin/sound-files/${s.id}`, { method: 'DELETE' });
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.success) loadSoundFiles();
       else setError(data.error || 'Failed to delete sound file');
@@ -1962,7 +1954,7 @@ export default function SuperAdmin() {
     if (!tenant_id || !mailbox) { setError('Tenant and mailbox number required'); return; }
     setLoading(true);
     try {
-      const res = await api('/api/superadmin/voicemail-boxes', {
+      const res = await apiFetch('/api/superadmin/voicemail-boxes', {
         method: 'POST',
         body: JSON.stringify({ tenant_id, mailbox, password, email, config: { greeting_sound_id: greeting_sound_id ? parseInt(greeting_sound_id, 10) : null, max_duration } }),
       });
@@ -1984,7 +1976,7 @@ export default function SuperAdmin() {
     const max_duration = parseInt(form.max_duration?.value || '120', 10);
     setError(''); setLoading(true);
     try {
-      const res = await api(`/api/superadmin/voicemail-boxes/${editingVoicemail.id}`, {
+      const res = await apiFetch(`/api/superadmin/voicemail-boxes/${editingVoicemail.id}`, {
         method: 'PATCH',
         body: JSON.stringify({ mailbox, password: password || undefined, email, config: { greeting_sound_id: greeting_sound_id ? parseInt(greeting_sound_id, 10) : null, max_duration } }),
       });
@@ -1999,7 +1991,7 @@ export default function SuperAdmin() {
     if (!window.confirm(`Delete voicemail box "${v.mailbox}"?`)) return;
     setError(''); setLoading(true);
     try {
-      const res = await api(`/api/superadmin/voicemail-boxes/${v.id}`, { method: 'DELETE' });
+      const res = await apiFetch(`/api/superadmin/voicemail-boxes/${v.id}`, { method: 'DELETE' });
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.success) loadVoicemailBoxes();
       else setError(data.error || 'Failed to delete voicemail box');
@@ -4042,7 +4034,7 @@ function AsteriskLogsView() {
 
   const loadConfig = useCallback(async () => {
     try {
-      const res = await api('/api/superadmin/asterisk-logs/config');
+      const res = await apiFetch('/api/superadmin/asterisk-logs/config');
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.success) {
         setConfig({
@@ -4058,7 +4050,7 @@ function AsteriskLogsView() {
     setError('');
     setLoading(true);
     try {
-      const res = await api(`/api/superadmin/asterisk-logs?file=${encodeURIComponent(logFile)}&tail=${tailLines}`);
+      const res = await apiFetch(`/api/superadmin/asterisk-logs?file=${encodeURIComponent(logFile)}&tail=${tailLines}`);
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.success) {
         setLines(data.lines || []);
@@ -4205,7 +4197,7 @@ function RolePermissionsView() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await api('/api/superadmin/role-modules');
+      const res = await apiFetch('/api/superadmin/role-modules');
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.success) {
         setRoleModules(data.role_modules || {});
@@ -4221,7 +4213,7 @@ function RolePermissionsView() {
     const key = `${roleId}_${moduleKey}`;
     setSaving(key);
     try {
-      const res = await api('/api/superadmin/role-modules', {
+      const res = await apiFetch('/api/superadmin/role-modules', {
         method: 'PUT',
         body: JSON.stringify({ role: roleId, module_key: moduleKey, enabled: !currentValue }),
       });
@@ -4486,16 +4478,6 @@ function getAgentStatusDisplay(status, breakName) {
   return { label: status || 'Unknown', cls: 'la-status-unknown' };
 }
 
-function formatDuration(ms) {
-  if (!ms || ms <= 0) return '—';
-  const totalSec = Math.floor(ms / 1000);
-  const h = Math.floor(totalSec / 3600);
-  const m = Math.floor((totalSec % 3600) / 60);
-  const s = totalSec % 60;
-  if (h > 0) return `${h}h ${String(m).padStart(2, '0')}m ${String(s).padStart(2, '0')}s`;
-  if (m > 0) return `${m}m ${String(s).padStart(2, '0')}s`;
-  return `${s}s`;
-}
 
 function LiveAgentDuration({ sessionStartedAt }) {
   const [elapsed, setElapsed] = useState(() =>
@@ -4509,7 +4491,7 @@ function LiveAgentDuration({ sessionStartedAt }) {
     ref.current = setInterval(tick, 1000);
     return () => clearInterval(ref.current);
   }, [sessionStartedAt]);
-  return <span>{formatDuration(elapsed)}</span>;
+  return <span>{formatDurationVerbose(elapsed)}</span>;
 }
 
 function LiveBreakDuration({ breakStartedAt }) {
@@ -4524,18 +4506,9 @@ function LiveBreakDuration({ breakStartedAt }) {
     ref.current = setInterval(tick, 1000);
     return () => clearInterval(ref.current);
   }, [breakStartedAt]);
-  return <span>{formatDuration(elapsed)}</span>;
+  return <span>{formatDurationVerbose(elapsed)}</span>;
 }
 
-function formatDurationSec(sec) {
-  if (sec == null || sec < 0) return '—';
-  const s = Math.floor(Number(sec));
-  const m = Math.floor(s / 60);
-  const h = Math.floor(m / 60);
-  if (h > 0) return `${h}h ${String(m % 60).padStart(2, '0')}m ${String(s % 60).padStart(2, '0')}s`;
-  if (m > 0) return `${m}m ${String(s % 60).padStart(2, '0')}s`;
-  return `${s}s`;
-}
 
 function LiveAgentsView({
   agents, stats, tenants, tenantId, onTenantChange,
@@ -4599,7 +4572,7 @@ function LiveAgentsView({
     setForceError('');
     setForceLoading(agentId);
     try {
-      const res = await api(`${apiBase}/live-agents/${encodeURIComponent(agentId)}/force-end-break`, { method: 'POST' });
+      const res = await apiFetch(`${apiBase}/live-agents/${encodeURIComponent(agentId)}/force-end-break`, { method: 'POST' });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.success) throw new Error(data.error || 'Failed');
       if (onRefresh) onRefresh();
@@ -4614,7 +4587,7 @@ function LiveAgentsView({
     setForceError('');
     setForceLoading(agentId);
     try {
-      const res = await api(`${apiBase}/live-agents/${encodeURIComponent(agentId)}/force-logout`, { method: 'POST' });
+      const res = await apiFetch(`${apiBase}/live-agents/${encodeURIComponent(agentId)}/force-logout`, { method: 'POST' });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.success) throw new Error(data.error || 'Failed');
       if (onRefresh) onRefresh();

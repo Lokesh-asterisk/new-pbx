@@ -11,6 +11,7 @@ import { getBridgedCallInfo, forceLogoutAgent } from '../ari-stasis-queue.js';
 import { destroySessionsForUser } from '../session-utils.js';
 import { endAgentSession } from '../agent-sessions.js';
 import { setExtensionAgentUserId } from '../agent-extension-resolver.js';
+import { csvEscape } from '../utils/csv.js';
 
 async function ensureSipExtensionForAgent(tenantId, extensionName, secret) {
   const tid = (tenantId != null && tenantId !== '' && !Number.isNaN(Number(tenantId)))
@@ -2088,13 +2089,6 @@ router.post('/live-agents/:agentId/force-logout', async (req, res) => {
 // =============================================================================
 // CDR (Call Detail Records) and recording playback
 // =============================================================================
-
-function csvEscape(s) {
-  if (s == null) return '';
-  const str = String(s);
-  if (/[,"\r\n]/.test(str)) return `"${str.replace(/"/g, '""')}"`;
-  return str;
-}
 
 router.get('/cdr', async (req, res) => {
   try {
