@@ -1,0 +1,89 @@
+/* ═══════════════════════════════════════════════════════════
+   Theme Variables — Dark (default) & Light
+   ═══════════════════════════════════════════════════════════ */
+
+:root {
+  /* Backgrounds */
+  --bg-page: #0f172a;
+  --bg-surface: #1e293b;
+  --bg-elevated: #334155;
+  --bg-input: #1e293b;
+  --bg-hover: rgba(59, 130, 246, 0.08);
+  --bg-overlay: rgba(0, 0, 0, 0.6);
+  --bg-card-glass: rgba(30, 41, 59, 0.9);
+  --bg-card-border: rgba(71, 85, 105, 0.5);
+
+  /* Text */
+  --text-primary: #f1f5f9;
+  --text-secondary: #e2e8f0;
+  --text-muted: #94a3b8;
+  --text-placeholder: #64748b;
+  --text-label: #cbd5e1;
+
+  /* Borders */
+  --border-default: #334155;
+  --border-subtle: #475569;
+
+  /* Shadows */
+  --shadow-card: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.3);
+
+  /* Scrollbar */
+  --scrollbar-bg: #1e293b;
+  --scrollbar-thumb: #475569;
+
+  /* Table */
+  --table-header-bg: #1e293b;
+  --table-row-hover: rgba(59, 130, 246, 0.06);
+  --table-stripe: rgba(30, 41, 59, 0.5);
+}
+
+[data-theme="light"] {
+  /* Backgrounds */
+  --bg-page: #f1f5f9;
+  --bg-surface: #ffffff;
+  --bg-elevated: #e2e8f0;
+  --bg-input: #ffffff;
+  --bg-hover: rgba(59, 130, 246, 0.06);
+  --bg-overlay: rgba(0, 0, 0, 0.4);
+  --bg-card-glass: rgba(255, 255, 255, 0.95);
+  --bg-card-border: rgba(203, 213, 225, 0.6);
+
+  /* Text */
+  --text-primary: #0f172a;
+  --text-secondary: #1e293b;
+  --text-muted: #64748b;
+  --text-placeholder: #94a3b8;
+  --text-label: #475569;
+
+  /* Borders */
+  --border-default: #e2e8f0;
+  --border-subtle: #cbd5e1;
+
+  /* Shadows */
+  --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.08);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
+
+  /* Scrollbar */
+  --scrollbar-bg: #f1f5f9;
+  --scrollbar-thumb: #cbd5e1;
+
+  /* Table */
+  --table-header-bg: #f8fafc;
+  --table-row-hover: rgba(59, 130, 246, 0.04);
+  --table-stripe: rgba(241, 245, 249, 0.5);
+}
+
+/* Smooth transitions when toggling themes */
+*,
+*::before,
+*::after {
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* Opt out of transition for elements that shouldn't animate */
+input, textarea, select, .no-transition {
+  transition: none;
+}

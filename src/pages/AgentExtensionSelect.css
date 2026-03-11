@@ -4,8 +4,8 @@
 }
 
 .extension-select-card {
-  background: #1e293b;
-  border: 1px solid #334155;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
   border-radius: 12px;
   padding: 2rem;
 }
@@ -14,17 +14,17 @@
   margin: 0 0 0.5rem;
   font-size: 1.25rem;
   font-weight: 600;
-  color: #f1f5f9;
+  color: var(--text-primary);
 }
 
 .extension-select-msg {
   margin: 0 0 1.5rem;
   font-size: 0.875rem;
-  color: #94a3b8;
+  color: var(--text-muted);
 }
 
 .extension-select-loading {
-  color: #94a3b8;
+  color: var(--text-muted);
   margin: 0;
 }
 
@@ -36,7 +36,7 @@
   display: block;
   font-size: 0.8125rem;
   font-weight: 500;
-  color: #cbd5e1;
+  color: var(--text-label);
   margin-bottom: 0.375rem;
 }
 
@@ -44,9 +44,9 @@
   width: 100%;
   padding: 0.625rem 0.875rem;
   font-size: 0.9375rem;
-  color: #f1f5f9;
-  background: #0f172a;
-  border: 1px solid #334155;
+  color: var(--text-primary);
+  background: var(--bg-page);
+  border: 1px solid var(--border-default);
   border-radius: 8px;
 }
 
@@ -92,7 +92,7 @@
 
 .extension-select-empty {
   font-size: 0.875rem;
-  color: #94a3b8;
+  color: var(--text-muted);
   margin: 0 0 1rem;
 }
 

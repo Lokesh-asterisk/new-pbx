@@ -13,15 +13,22 @@
     "add-user": "node server/add-user.js"
   },
   "dependencies": {
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0",
-    "react-router-dom": "^7.1.0",
     "bcrypt": "^5.1.1",
+    "connect-redis": "^9.0.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.21.0",
+    "express-rate-limit": "^7.5.1",
     "express-session": "^1.18.0",
-    "mysql2": "^3.11.0"
+    "multer": "^2.1.1",
+    "mysql2": "^3.11.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-router-dom": "^7.1.0",
+    "recharts": "^3.8.0",
+    "redis": "^5.11.0",
+    "ws": "^8.18.0",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",

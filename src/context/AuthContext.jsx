@@ -1,4 +1,6 @@
 import { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import { normalizeRole } from '../utils/roles.js';
+import { apiFetch } from '../utils/api.js';
 
 const ROLES = {
   SUPERADMIN: 'superadmin',
@@ -7,31 +9,19 @@ const ROLES = {
   AGENT: 'agent',
 };
 
-const API_BASE = import.meta.env.VITE_API_URL || '';
-
-async function apiFetch(path, options = {}) {
-  const res = await fetch(`${API_BASE}${path}`, {
-    ...options,
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json', ...options.headers },
-  });
-  return res;
-}
-
-// Demo fallback when API is not available
-const DEMO_USERS = {
-  superadmin: { password: 'demo123', name: 'Super Admin' },
-  admin: { password: 'demo123', name: 'Admin' },
-  user: { password: 'demo123', name: 'User' },
-  agent: { password: 'demo123', name: 'Agent' },
-};
-
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
-    const stored = sessionStorage.getItem('pbx_user');
-    return stored ? JSON.parse(stored) : null;
+    try {
+      const stored = sessionStorage.getItem('pbx_user');
+      if (!stored) return null;
+      const u = JSON.parse(stored);
+      if (u) u.role = normalizeRole(u.role);
+      return u;
+    } catch {
+      return null;
+    }
   });
   const [authReady, setAuthReady] = useState(false);
 
@@ -45,7 +35,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   const login = useCallback(async (username, password) => {
-    const effectiveUsername = (username || '').trim().toLowerCase();
+    const effectiveUsername = (username || '').trim();
     if (!effectiveUsername) {
       return { success: false, error: 'Username is required' };
     }
@@ -55,36 +45,44 @@ export function AuthProvider({ children }) {
         method: 'POST',
         body: JSON.stringify({ username: effectiveUsername, password }),
       });
-      const data = await res.json().catch(() => ({}));
+      const text = await res.text();
+      let data = {};
+      try {
+        data = text ? JSON.parse(text) : {};
+      } catch {
+        data = { error: 'Server returned an invalid response. Is the API running (e.g. port 3001)?' };
+      }
       if (res.ok && data.success && data.user) {
         const userData = {
           ...data.user,
+          role: normalizeRole(data.user.role),
           displayName: data.user.username?.charAt(0).toUpperCase() + data.user.username?.slice(1) || data.user.username,
         };
         persistUser(userData);
         return { success: true, user: userData };
       }
-    } catch (_) {}
-
-    const account = DEMO_USERS[effectiveUsername];
-    if (account && account.password === password) {
-      const userData = {
-        username: effectiveUsername,
-        role: effectiveUsername,
-        displayName: account.name,
+      return { success: false, error: data.error || 'Invalid credentials' };
+    } catch (e) {
+      const msg = e?.message || '';
+      const isNetwork = /failed to fetch|network|load/i.test(msg) || (e?.name === 'TypeError' && !msg);
+      return {
+        success: false,
+        error: isNetwork
+          ? 'Cannot reach server. Start the API (e.g. npm run server on port 3001) and check your connection.'
+          : 'Login failed. Check your connection.',
       };
-      persistUser(userData);
-      return { success: true, user: userData };
     }
-    return { success: false, error: 'Invalid credentials. Use username agent/admin/user/superadmin and password demo123' };
   }, [persistUser]);
 
   const logout = useCallback(async () => {
     try {
+      if (user?.role === 'agent') {
+        await apiFetch('/api/agent/logout', { method: 'POST' });
+      }
       await apiFetch('/api/auth/logout', { method: 'POST' });
     } catch (_) {}
     persistUser(null);
-  }, [persistUser]);
+  }, [persistUser, user?.role]);
 
   useEffect(() => {
     let cancelled = false;
@@ -92,9 +90,13 @@ export function AuthProvider({ children }) {
       try {
         const res = await apiFetch('/api/auth/me');
         const data = await res.json().catch(() => ({}));
-        if (!cancelled && data.success && data.user) {
+        if (cancelled) return;
+        if (res.status === 401 || !res.ok) {
+          persistUser(null);
+        } else if (data.success && data.user) {
           const userData = {
             ...data.user,
+            role: normalizeRole(data.user.role),
             displayName: data.user.username?.charAt(0).toUpperCase() + data.user.username?.slice(1) || data.user.username,
           };
           persistUser(userData);
@@ -104,6 +106,20 @@ export function AuthProvider({ children }) {
     })();
     return () => { cancelled = true; };
   }, [persistUser]);
+
+  // Periodic auth check: when session is destroyed (e.g. force-logout), clear user so app redirects to login
+  useEffect(() => {
+    if (!user) return;
+    const interval = setInterval(async () => {
+      try {
+        const res = await apiFetch('/api/auth/me');
+        if (res.status === 401) {
+          persistUser(null);
+        }
+      } catch (_) {}
+    }, 20000);
+    return () => clearInterval(interval);
+  }, [user, persistUser]);
 
   const value = { user, login, logout, authReady, ROLES };
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

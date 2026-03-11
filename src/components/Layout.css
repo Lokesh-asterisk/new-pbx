@@ -1,6 +1,6 @@
 .app-layout {
   min-height: 100vh;
-  background: #0f172a;
+  background: var(--bg-page);
   display: flex;
   flex-direction: column;
 }
@@ -10,8 +10,8 @@
   align-items: center;
   justify-content: space-between;
   padding: 0.75rem 1.5rem;
-  background: #1e293b;
-  border-bottom: 1px solid #334155;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border-default);
   flex-shrink: 0;
 }
 
@@ -25,17 +25,24 @@
   font-size: 1.5rem;
 }
 
+.header-logo-img {
+  height: 2rem;
+  width: auto;
+  object-fit: contain;
+  font-size: 0;
+}
+
 .header-title {
   margin: 0;
   font-size: 1.125rem;
   font-weight: 600;
-  color: #f1f5f9;
+  color: var(--text-primary);
 }
 
 .header-subtitle {
   margin: 0.25rem 0 0;
   font-size: 0.8125rem;
-  color: #94a3b8;
+  color: var(--text-muted);
 }
 
 .header-right {
@@ -46,14 +53,14 @@
 
 .user-badge {
   font-size: 0.875rem;
-  color: #cbd5e1;
+  color: var(--text-label);
 }
 
 .role-tag {
   font-size: 0.75rem;
   padding: 0.25rem 0.5rem;
-  background: #334155;
-  color: #94a3b8;
+  background: var(--bg-elevated);
+  color: var(--text-muted);
   border-radius: 6px;
   text-transform: capitalize;
 }
@@ -61,21 +68,68 @@
 .btn-logout {
   padding: 0.5rem 1rem;
   font-size: 0.875rem;
-  color: #94a3b8;
+  color: var(--text-muted);
   background: transparent;
-  border: 1px solid #475569;
+  border: 1px solid var(--border-subtle);
   border-radius: 6px;
   cursor: pointer;
   transition: color 0.2s, border-color 0.2s;
 }
 
 .btn-logout:hover {
-  color: #f1f5f9;
-  border-color: #64748b;
+  color: var(--text-primary);
+  border-color: var(--text-placeholder);
 }
 
 .app-main {
   flex: 1;
   padding: 1.5rem;
   overflow: auto;
+}
+
+/* Theme toggle button */
+.btn-theme-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0;
+  font-size: 1.125rem;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.btn-theme-toggle:hover {
+  background: var(--border-subtle);
+}
+
+.btn-theme-toggle:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* Mobile responsive layout */
+@media (max-width: 768px) {
+  .app-header {
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+  }
+  .header-left {
+    width: 100%;
+  }
+  .header-right {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+
+/* Focus styles for keyboard navigation */
+.btn-logout:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
 }

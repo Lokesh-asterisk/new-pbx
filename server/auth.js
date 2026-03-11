@@ -38,33 +38,27 @@ export async function verifyCurrentPassword(userId, password) {
   return bcrypt.compare(password, row.password_hash);
 }
 
-export async function getPermissions(permissionGroupId) {
-  if (!permissionGroupId) return {};
-  const row = await queryOne('SELECT * FROM permission_groups WHERE id = ?', [permissionGroupId]);
-  if (!row) return {};
-  return {
-    queue_cdr: !!row.queue_cdr,
-    manual_cdr: !!row.manual_cdr,
-    extension_cdr: !!row.extension_cdr,
-    extension_route_cdr: !!row.extension_route_cdr,
-    live_agents: !!row.live_agents,
-    agent_apr: !!row.agent_apr,
-    session_wise_agent_apr: !!row.session_wise_agent_apr,
-    inbound_route: !!row.inbound_route,
-    blacklist: !!row.blacklist,
-    number_masking: !!row.number_masking,
-  };
+export async function getEnabledModules(roleId) {
+  if (Number(roleId) === 1) return null; // superadmin = all modules
+  try {
+    const rows = await query(
+      'SELECT module_key FROM role_modules WHERE role = ? AND enabled = 1',
+      [Number(roleId)]
+    );
+    return rows.map(r => r.module_key);
+  } catch {
+    return [];
+  }
 }
 
-export function buildSessionUser(user, permissions = {}) {
+export function buildSessionUser(user, modules) {
   return {
     id: user.id,
     username: user.username,
     email: user.email || '',
     role: roleName(user.role),
     parent_id: user.parent_id,
-    permission_group_id: user.permission_group_id,
-    permissions,
+    modules, // null = superadmin (all access), array = enabled module keys
     change_password_required: !!user.change_password_required,
     phone_login_name: user.phone_login_name,
     phone_login_number: user.phone_login_number,

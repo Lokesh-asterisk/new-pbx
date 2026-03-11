@@ -31,6 +31,19 @@ async function run() {
     await conn.query(schema);
     console.log('Schema applied.');
 
+    const migrationsDir = join(__dirname, '..', 'docs', 'migrations');
+    try {
+      const { readdirSync } = await import('fs');
+      const files = readdirSync(migrationsDir).filter(f => f.endsWith('.sql')).sort();
+      for (const file of files) {
+        const sql = readFileSync(join(migrationsDir, file), 'utf8');
+        await conn.query(sql);
+        console.log(`Migration applied: ${file}`);
+      }
+    } catch (e) {
+      console.log('Migrations folder read skipped:', e.message);
+    }
+
     const [existing] = await conn.query('SELECT id FROM users WHERE username = ?', ['superadmin']);
     if (existing.length > 0) {
       console.log('Seed users already exist. Skipping seed.');
@@ -51,6 +64,17 @@ async function run() {
       `INSERT INTO sip_extensions (tenant_id, name) VALUES (2, '1001'), (2, '1002')`
     );
     console.log('Seeded SIP extensions 1001, 1002 for tenant 2. Agents (agent, agent2) share same tenant; one can take 1001, other 1002.');
+
+    const [crmRows] = await conn.query('SELECT id FROM crm_customers WHERE tenant_id = 2 LIMIT 1').catch(() => [[]]);
+    if (!crmRows || crmRows.length === 0) {
+      await conn.query(
+        `INSERT INTO crm_customers (tenant_id, customer_id, name, phone, email, notes) VALUES
+         (2, 'C001', 'Acme Corp', '+15551234001', 'contact@acme.example.com', 'Preferred customer'),
+         (2, 'C002', 'Jane Smith', '+15551234002', 'jane@example.com', NULL),
+         (2, 'C003', 'John Doe', '+15551234003', NULL, 'Callback requested')`
+      ).catch(() => {});
+      console.log('Seeded CRM customers C001, C002, C003 for tenant 2.');
+    }
   } catch (err) {
     console.error('Seed failed:', err.message || err.code || err);
     if (err.code === 'ECONNREFUSED') {

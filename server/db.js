@@ -7,8 +7,8 @@ const pool = mysql.createPool({
   password: process.env.DB_PASSWORD || '',
   database: process.env.DB_NAME || 'pbx_callcentre',
   waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0,
+  connectionLimit: parseInt(process.env.DB_POOL_SIZE || '25', 10),
+  queueLimit: 100,
   charset: 'utf8mb4_unicode_ci',
 });
 

@@ -1,29 +1,22 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-
-const ROLE_ROUTES = {
-  superadmin: '/superadmin',
-  admin: '/admin',
-  user: '/user',
-  agent: '/agent',
-};
+import { normalizeRole, getRoleRedirectPath } from '../utils/roles.js';
 
 export function ProtectedRoute({ children, allowedRoles }) {
   const { user } = useAuth();
   const location = useLocation();
+  const role = user ? normalizeRole(user.role) : null;
 
   if (!user) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  if (allowedRoles && !allowedRoles.includes(user.role)) {
-    const redirectTo = ROLE_ROUTES[user.role] || '/';
+  if (allowedRoles && !allowedRoles.includes(role)) {
+    const redirectTo = getRoleRedirectPath(role);
     return <Navigate to={redirectTo} replace />;
   }
 
   return children;
 }
 
-export function getRoleRedirectPath(role) {
-  return ROLE_ROUTES[role] || '/';
-}
+export { getRoleRedirectPath };

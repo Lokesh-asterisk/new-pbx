@@ -11,7 +11,7 @@
   margin: 0 0 1rem;
   font-size: 1rem;
   font-weight: 600;
-  color: #94a3b8;
+  color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -23,8 +23,8 @@
 }
 
 .stat-card {
-  background: #1e293b;
-  border: 1px solid #334155;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
   border-radius: 10px;
   padding: 1.25rem;
   display: flex;
@@ -35,12 +35,12 @@
 .stat-value {
   font-size: 1.75rem;
   font-weight: 700;
-  color: #f1f5f9;
+  color: var(--text-primary);
 }
 
 .stat-label {
   font-size: 0.8125rem;
-  color: #94a3b8;
+  color: var(--text-muted);
 }
 
 .action-list {
@@ -52,15 +52,89 @@
 .action-btn {
   padding: 0.625rem 1rem;
   font-size: 0.875rem;
-  color: #e2e8f0;
-  background: #1e293b;
-  border: 1px solid #334155;
+  color: var(--text-secondary);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
   border-radius: 8px;
   cursor: pointer;
   transition: background 0.2s, border-color 0.2s;
 }
 
 .action-btn:hover {
-  background: #334155;
-  border-color: #475569;
+  background: var(--bg-elevated);
+  border-color: var(--border-subtle);
+}
+
+.dashboard-error {
+  color: #f87171;
+  margin: 0 0 0.5rem;
+  font-size: 0.875rem;
+}
+
+.dashboard-loading {
+  color: var(--text-muted);
+  margin: 0 0 0.5rem;
+  font-size: 0.875rem;
+}
+
+.dashboard-muted {
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+  margin: 0 0 0.5rem;
+}
+
+.dashboard-select {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: 6px;
+  color: var(--text-secondary);
+  padding: 0.375rem 0.5rem;
+  font-size: 0.875rem;
+}
+
+.dashboard-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border-default);
+  border-radius: 8px;
+}
+
+.dashboard-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.dashboard-table th,
+.dashboard-table td {
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border-default);
+}
+
+.dashboard-table th {
+  background: var(--table-header-bg);
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.dashboard-table tbody tr:hover {
+  background: var(--bg-surface);
+}
+
+/* Color-coded metric values */
+.metric-good { color: #22c55e; }
+.metric-warning { color: #f59e0b; }
+.metric-danger { color: #ef4444; }
+
+/* Sortable table headers */
+.sortable-th {
+  cursor: pointer;
+  user-select: none;
+}
+.sortable-th:hover {
+  color: #3b82f6;
+}
+.sort-indicator {
+  margin-left: 4px;
+  font-size: 0.75rem;
 }

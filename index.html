@@ -7,6 +7,9 @@
     <title>PBX Call Centre</title>
   </head>
   <body>
+    <script>
+      (function(){var t=localStorage.getItem('app-theme');if(!t)t=window.matchMedia&&window.matchMedia('(prefers-color-scheme:light)').matches?'light':'dark';document.documentElement.setAttribute('data-theme',t)})();
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

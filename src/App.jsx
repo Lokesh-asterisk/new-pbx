@@ -1,12 +1,23 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { BrandingProvider } from './context/BrandingContext';
 import { ProtectedRoute, getRoleRedirectPath } from './components/ProtectedRoute';
-import Login from './pages/Login';
-import SuperAdmin from './pages/SuperAdmin';
-import Admin from './pages/Admin';
-import User from './pages/User';
-import Agent from './pages/Agent';
 import './App.css';
+
+const Login = lazy(() => import('./pages/Login'));
+const Dashboard = lazy(() => import('./pages/SuperAdmin'));
+const Agent = lazy(() => import('./pages/Agent'));
+const Wallboard = lazy(() => import('./pages/Wallboard'));
+const Reports = lazy(() => import('./pages/Reports'));
+
+function PageLoader() {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', color: 'var(--text-muted)' }}>
+      <span>Loading...</span>
+    </div>
+  );
+}
 
 function RootRedirect() {
   const { user } = useAuth();
@@ -17,15 +28,26 @@ function RootRedirect() {
 function App() {
   return (
     <AuthProvider>
+      <BrandingProvider>
       <BrowserRouter>
+        <Suspense fallback={<PageLoader />}>
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/" element={<RootRedirect />} />
           <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute allowedRoles={['superadmin', 'admin', 'user']}>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+          {/* Legacy routes redirect to unified dashboard */}
+          <Route
             path="/superadmin"
             element={
               <ProtectedRoute allowedRoles={['superadmin']}>
-                <SuperAdmin />
+                <Navigate to="/dashboard" replace />
               </ProtectedRoute>
             }
           />
@@ -33,7 +55,7 @@ function App() {
             path="/admin"
             element={
               <ProtectedRoute allowedRoles={['admin']}>
-                <Admin />
+                <Navigate to="/dashboard" replace />
               </ProtectedRoute>
             }
           />
@@ -41,7 +63,23 @@ function App() {
             path="/user"
             element={
               <ProtectedRoute allowedRoles={['user']}>
-                <User />
+                <Navigate to="/dashboard" replace />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/wallboard"
+            element={
+              <ProtectedRoute allowedRoles={['superadmin', 'admin', 'user']}>
+                <Wallboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/reports"
+            element={
+              <ProtectedRoute allowedRoles={['superadmin', 'admin', 'user']}>
+                <Reports />
               </ProtectedRoute>
             }
           />
@@ -55,7 +93,9 @@ function App() {
           />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        </Suspense>
       </BrowserRouter>
+      </BrandingProvider>
     </AuthProvider>
   );
 }
