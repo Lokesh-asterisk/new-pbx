@@ -1,12 +1,14 @@
 import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
+import { useBranding } from '../context/BrandingContext';
 import './Dashboard.css';
 
 export default function User() {
   const navigate = useNavigate();
+  const { branding } = useBranding();
 
   return (
-    <Layout title="User" subtitle="PBX Call Centre — Supervisor / Team lead">
+    <Layout title="User" subtitle={`${branding.productName} — Supervisor / Team lead`}>
       <div className="dashboard">
         <section className="dashboard-section">
           <h2>Overview</h2>

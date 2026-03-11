@@ -1,11 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
+import { useBranding } from '../context/BrandingContext';
 import { apiFetch } from '../utils/api';
 import './Dashboard.css';
 
 export default function Admin() {
   const navigate = useNavigate();
+  const { branding } = useBranding();
   const [view, setView] = useState('dashboard'); // 'dashboard' | 'reports'
   const [stats, setStats] = useState(null);
   const [statsError, setStatsError] = useState('');
@@ -162,7 +164,7 @@ export default function Admin() {
   };
 
   return (
-    <Layout title="Admin" subtitle="PBX Call Centre — Reports & monitoring">
+    <Layout title="Admin" subtitle={`${branding.productName} — Reports & monitoring`}>
       <div className="dashboard">
         {view === 'dashboard' && (
           <>

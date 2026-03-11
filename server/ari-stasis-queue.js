@@ -3,7 +3,7 @@
  * Dialplan: Stasis(queue-dashboard, QueueName, UNIQUEID). App picks first agent by queue ring strategy.
  */
 import { WebSocket } from 'ws';
-import { createCallRecord, updateCallRecordAgent, setAgentRinging, setAgentAnswered, setAgentHangup, updateCallRecordAbandon, updateCallRecordTransfer } from './call-handler.js';
+import { createCallRecord, updateCallRecordAgent, setAgentRinging, setAgentAnswered, setAgentHangup, updateCallRecordAbandon, updateCallRecordTransfer, notifyTransferredCallToAgent } from './call-handler.js';
 import { query, queryOne } from './db.js';
 import { addChannelToBridge, removeChannelFromBridge, hangupChannel, createBridge, answerChannel, startMohOnChannel, stopMohOnChannel, muteChannel, getChannelVariable, setChannelVariable, continueInDialplan, redirectChannel } from './asterisk-ari.js';
 import { getOrderedQueueMembers } from './queue-strategy.js';
@@ -784,7 +784,7 @@ function findCustomerIdByAgent(agentId) {
   return null;
 }
 
-const TRANSFER_CONTEXT = process.env.ASTERISK_TRANSFER_CONTEXT || 'from-internal';
+const TRANSFER_CONTEXT = process.env.ASTERISK_TRANSFER_CONTEXT || 'TMain';
 
 /**
  * Transfer a bridged queue call to another PJSIP extension.
@@ -813,6 +813,114 @@ export async function transferBridgedCallToExtension(agentId, targetEndpoint, tr
   }
 
   const { bridgeId, agentChannelId, uniqueId } = bridged;
+
+  // Check if target agent has an ARI login channel — if so, bridge directly (no second SIP call)
+  const targetLoginChannel = agentLoginStasisChannels.get(targetExt);
+
+  if (targetLoginChannel) {
+    return await transferViaAriBridge(custId, bridged, targetExt, targetLoginChannel, transferType);
+  }
+
+  // Fallback: target not logged in via ARI — use dialplan TMain
+  return await transferViaDialplan(custId, bridged, targetExt, targetEndpoint, transferType);
+}
+
+/**
+ * ARI-based transfer: reuse target agent's existing login channel. No second SIP call.
+ * Same pattern as answerQueueCallWithLoginChannel.
+ */
+async function transferViaAriBridge(custId, bridged, targetExt, targetLoginChannel, transferType) {
+  const { bridgeId, agentChannelId, uniqueId } = bridged;
+  const isLoginChannel = agentLoginStasisChannels.get(bridged.agentId) === agentChannelId;
+
+  // Remove customer from current bridge
+  const removeCust = await removeChannelFromBridge(bridgeId, custId);
+  if (removeCust.status !== 200 && removeCust.status !== 204) {
+    console.warn('[transfer-ari] Failed to remove customer from bridge:', removeCust.status, removeCust.body);
+    return { success: false, error: 'Failed to remove caller from bridge' };
+  }
+  activeBridgedCalls.delete(custId);
+  pendingCustomers.delete(custId);
+
+  // Free Agent1's login channel back to MOH
+  if (isLoginChannel) {
+    await removeChannelFromBridge(bridgeId, agentChannelId).catch(() => {});
+    await startMohOnChannel(agentChannelId).catch(() => {});
+  } else {
+    await hangupChannel(agentChannelId).catch(() => {});
+  }
+
+  // Record transfer and clear Agent1 state
+  await updateCallRecordTransfer(uniqueId, {
+    transferFrom: bridged.agentId,
+    transferTo: targetExt,
+    transferType: transferType || 'blind',
+  }).catch(() => {});
+  await setAgentHangup(bridged.agentId, uniqueId, 'transferred');
+
+  // Notify Agent2 dashboard (Ringing + "Transfer from")
+  await notifyTransferredCallToAgent(targetExt, uniqueId, bridged.agentId, null, targetLoginChannel, custId).catch((e) =>
+    console.warn('[transfer-ari] notify target agent:', e?.message || e)
+  );
+
+  // Stop MOH on both channels before bridging
+  await stopMohOnChannel(targetLoginChannel).catch(() => {});
+  await stopMohOnChannel(custId).catch(() => {});
+
+  // Create new bridge and bridge customer with Agent2's login channel
+  const newBridge = await createBridge();
+  if (newBridge.status !== 200 || !newBridge.bridgeId) {
+    console.warn('[transfer-ari] Failed to create bridge for transfer');
+    await hangupChannel(custId).catch(() => {});
+    return { success: false, error: 'Failed to create bridge for transfer' };
+  }
+
+  const addCust = await addChannelToBridge(newBridge.bridgeId, custId);
+  if (addCust.status !== 200 && addCust.status !== 204) {
+    console.warn('[transfer-ari] Failed to add customer to new bridge:', addCust.status, addCust.body);
+    await startMohOnChannel(targetLoginChannel).catch(() => {});
+    await hangupChannel(custId).catch(() => {});
+    return { success: false, error: 'Failed to bridge caller with target agent' };
+  }
+
+  const addAgent2 = await addChannelToBridge(newBridge.bridgeId, targetLoginChannel);
+  if (addAgent2.status !== 200 && addAgent2.status !== 204) {
+    console.warn('[transfer-ari] Failed to add target agent to bridge:', addAgent2.status, addAgent2.body);
+    await startMohOnChannel(targetLoginChannel).catch(() => {});
+    await hangupChannel(custId).catch(() => {});
+    return { success: false, error: 'Failed to bridge target agent' };
+  }
+
+  // Track the new bridged call
+  activeBridgedCalls.set(custId, {
+    agentChannelId: targetLoginChannel,
+    bridgeId: newBridge.bridgeId,
+    agentId: targetExt,
+    uniqueId: uniqueId || '',
+  });
+
+  // Update call record with new agent
+  await updateCallRecordAgent(uniqueId, {
+    agentExtension: targetExt,
+    agentId: targetExt,
+  }).catch(() => {});
+
+  // Set Agent2 to "On Call" and broadcast call_answered
+  await setAgentAnswered(targetExt, uniqueId).catch((e) =>
+    console.warn('[transfer-ari] setAgentAnswered:', e?.message || e)
+  );
+
+  console.log('[transfer-ari] Successfully bridged customer', custId, 'with agent', targetExt, 'login channel', targetLoginChannel);
+
+  setTimeout(() => reassignWaitingCalls().catch((e) => console.error('[ari-stasis-queue] reassign after transfer:', e.message)), 500);
+  return { success: true };
+}
+
+/**
+ * Dialplan-based transfer: target has no ARI login channel, use TMain Dial().
+ */
+async function transferViaDialplan(custId, bridged, targetExt, targetEndpoint, transferType) {
+  const { bridgeId, agentChannelId, uniqueId } = bridged;
   activeBridgedCalls.delete(custId);
   pendingCustomers.delete(custId);
 
@@ -821,9 +929,12 @@ export async function transferBridgedCallToExtension(agentId, targetEndpoint, tr
   const removeCust = await removeChannelFromBridge(bridgeId, custId);
   if (removeCust.status !== 200 && removeCust.status !== 204) {
     activeBridgedCalls.set(custId, bridged);
-    console.warn('[transfer] Failed to remove customer from bridge:', removeCust.status, removeCust.body);
+    console.warn('[transfer-dialplan] Failed to remove customer from bridge:', removeCust.status, removeCust.body);
     return { success: false, error: 'Failed to remove caller from bridge' };
   }
+
+  await setChannelVariable(custId, 'CDRID', uniqueId);
+  await setChannelVariable(custId, 'AgentNumber', bridged.agentId);
 
   let sent = false;
   const continueRes = await continueInDialplan(custId, TRANSFER_CONTEXT, targetExt, 1);
@@ -838,7 +949,7 @@ export async function transferBridgedCallToExtension(agentId, targetEndpoint, tr
       if (redirectRes.status === 200 || redirectRes.status === 204) {
         sent = true;
       } else {
-        console.warn('[transfer] continueInDialplan and redirect failed. continue:', continueRes.status, 'redirect:', redirectRes.status, redirectRes.body?.slice(0, 200));
+        console.warn('[transfer-dialplan] continueInDialplan and redirect failed. continue:', continueRes.status, 'redirect:', redirectRes.status, redirectRes.body?.slice(0, 200));
         await hangupChannel(custId).catch(() => {});
       }
     }
@@ -858,6 +969,9 @@ export async function transferBridgedCallToExtension(agentId, targetEndpoint, tr
       transferTo: targetExt,
       transferType: transferType || 'blind',
     }).catch(() => {});
+    await notifyTransferredCallToAgent(targetExt, uniqueId, bridged.agentId).catch((e) =>
+      console.warn('[transfer-dialplan] notify target agent:', e?.message || e)
+    );
   }
 
   setTimeout(() => reassignWaitingCalls().catch((e) => console.error('[ari-stasis-queue] reassign after transfer:', e.message)), 500);

@@ -5,6 +5,7 @@ import {
   RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
 } from 'recharts';
 import Layout from '../components/Layout';
+import { useBranding } from '../context/BrandingContext';
 import { API_BASE, apiJson as apiFetch } from '../utils/api.js';
 import { formatSecPadded, formatSecCompact } from '../utils/format.js';
 import './Reports.css';
@@ -25,6 +26,7 @@ const COLORS = ['#3b82f6', '#22c55e', '#f59e0b', '#ef4444', '#a855f7', '#06b6d4'
 const PIE_COLORS = { talk: '#3b82f6', ready: '#22c55e', wrap: '#a855f7', pause: '#f59e0b' };
 
 export default function Reports() {
+  const { branding } = useBranding();
   const [tab, setTab] = useState('performance');
   const [period, setPeriod] = useState('daily');
   const [startDate, setStartDate] = useState(new Date().toISOString().slice(0, 10));
@@ -154,7 +156,7 @@ export default function Reports() {
   const tooltipStyle = { backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '8px', color: '#e2e8f0', fontSize: '0.8125rem' };
 
   return (
-    <Layout title="Agent Performance Reports" subtitle="PBX Call Centre — Reports">
+    <Layout title="Agent Performance Reports" subtitle={`${branding.productName} — Reports`}>
       <div className="reports">
         <div className="reports-header-actions">
           <a href="/wallboard" className="rpt-btn">Back to Wallboard</a>

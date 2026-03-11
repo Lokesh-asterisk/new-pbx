@@ -410,6 +410,102 @@ export async function setAgentHangup(agentId, uniqueId, status = 'completed', op
 }
 
 /**
+ * Notify the target agent (transferee) that a call is being transferred to them.
+ * Updates agent_status to Ringing and broadcasts incoming_call with transferFrom so the dashboard shows "Transfer from X".
+ * @param {string} targetExtension - Extension being rung (e.g. "7002")
+ * @param {string} uniqueId - Call unique_id
+ * @param {string} transferFromAgentId - Agent/extension who transferred (e.g. "7001")
+ * @param {string} [customerNumber] - Caller number (from call record if not provided)
+ * @param {string} [agentChannelId] - Agent2's channel id (login channel) for dashboard call controls
+ * @param {string} [customerChannelId] - Customer channel id for dashboard call controls
+ * @returns {Promise<number|null>} Target agent user id if notified
+ */
+export async function notifyTransferredCallToAgent(targetExtension, uniqueId, transferFromAgentId, customerNumber = null, agentChannelId = null, customerChannelId = null) {
+  const targetExt = String(targetExtension || '').replace(/\D/g, '');
+  const fromAid = String(transferFromAgentId || '').replace(/\D/g, '');
+  if (!targetExt || !uniqueId) return null;
+
+  let transferFromName = null;
+  if (fromAid) {
+    const fromRow = await queryOne(
+      'SELECT username FROM users WHERE phone_login_number = ? AND role = 5 LIMIT 1',
+      [fromAid]
+    );
+    if (fromRow?.username) transferFromName = String(fromRow.username).trim();
+  }
+
+  const callRow = await queryOne(
+    'SELECT source_number, queue_name, campaign_name FROM call_records WHERE unique_id = ? LIMIT 1',
+    [uniqueId]
+  );
+  const customerNum = customerNumber || callRow?.source_number || 'Unknown';
+  const queueName = callRow?.queue_name || null;
+  const campaignName = callRow?.campaign_name || null;
+
+  let userRow = await resolveAgentUserByExtensionName(null, targetExt);
+  let aidForUpdate = targetExt;
+  if (userRow) {
+    const agentRow = await queryOne(
+      'SELECT phone_login_number FROM users WHERE id = ? AND role = 5 LIMIT 1',
+      [userRow.id]
+    );
+    if (agentRow?.phone_login_number != null) {
+      aidForUpdate = String(agentRow.phone_login_number).replace(/\D/g, '');
+    }
+  }
+
+  const statusRow = await queryOne(
+    'SELECT status FROM agent_status WHERE agent_id = ? LIMIT 1',
+    [aidForUpdate]
+  );
+  const s = (statusRow?.status || '').toString().trim().toLowerCase();
+  if (s === 'loggedout' || s === 'loginfailed') return null;
+  if (['on call', 'ringing', 'transferring', 'outbound'].includes(s)) return null;
+
+  await query(
+    `UPDATE agent_status SET status = 'Ringing', agent_channel_id = ?, customer_channel_id = ?, call_id = ?, customer_number = ?, queue_name = ?, timestamp = NOW() WHERE agent_id = ?`,
+    [agentChannelId || null, customerChannelId || null, uniqueId, customerNum, queueName, aidForUpdate]
+  );
+
+  const userId = userRow ? Number(userRow.id) : null;
+  const wbTenantId = await resolveAgentTenantId(aidForUpdate);
+  let agentDisplayNumber = customerNum;
+  if (userId && wbTenantId) {
+    try {
+      const tenantRow = await queryOne('SELECT COALESCE(mask_caller_number_agent, 0) AS mask_caller_number_agent FROM tenants WHERE id = ?', [wbTenantId]);
+      if (tenantRow && Number(tenantRow.mask_caller_number_agent) === 1 && agentDisplayNumber) {
+        agentDisplayNumber = maskCallerNumberLast4(agentDisplayNumber);
+      }
+    } catch (_) {}
+  }
+  if (userId) {
+    broadcastToAgent(userId, {
+      type: EventTypes.INCOMING_CALL,
+      payload: {
+        channelId: agentChannelId || null,
+        customerChannelId: customerChannelId || null,
+        customerNumber: agentDisplayNumber,
+        uniqueId,
+        queueName: queueName || null,
+        campaignName: campaignName || null,
+        isTransferred: true,
+        transferFrom: fromAid,
+        transferFromName,
+      },
+    });
+  }
+  if (wbTenantId) {
+    broadcastToWallboard(wbTenantId, {
+      type: 'agent_status',
+      payload: { agent_id: aidForUpdate, status: 'Ringing', customer_number: customerNum, queue_name: queueName },
+    });
+    updateRedisAgent(wbTenantId, aidForUpdate, { status: 'Ringing', customer_number: customerNum, queue_name: queueName });
+    logAgentStatusChange(wbTenantId, aidForUpdate, 'RINGING');
+  }
+  return userId;
+}
+
+/**
  * Broadcast agent status to the agent's dashboard (e.g. after hold/resume).
  */
 export async function broadcastAgentStatus(agentUserId, statusPayload) {

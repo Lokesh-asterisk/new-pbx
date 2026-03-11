@@ -39,6 +39,15 @@
   margin-bottom: 0.5rem;
 }
 
+.login-logo-img {
+  display: block;
+  height: 3.5rem;
+  width: auto;
+  max-width: 200px;
+  object-fit: contain;
+  margin: 0 auto 0.5rem;
+}
+
 .login-logo h1 {
   margin: 0;
   font-size: 1.5rem;
@@ -96,8 +105,8 @@
 .form-group input:focus,
 .form-group select:focus {
   outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+  border-color: var(--brand-primary, #3b82f6);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand-primary, #3b82f6) 20%, transparent);
 }
 
 .login-hint {
@@ -125,15 +134,15 @@
   font-size: 0.9375rem;
   font-weight: 600;
   color: #fff;
-  background: #2563eb;
+  background: var(--brand-primary, #2563eb);
   border: none;
   border-radius: 8px;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: background 0.2s, filter 0.2s;
 }
 
 .btn-login:hover {
-  background: #1d4ed8;
+  filter: brightness(0.9);
 }
 
 .btn-login:active {

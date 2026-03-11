@@ -284,6 +284,7 @@ export async function syncDialplanToAsterisk() {
     L(`CALL_INCOMING=\${APP_URL}IncomingCall?`);
     L(`CALL_ANSWERED=\${APP_URL}CallAnswered?`);
     L(`CALL_HANGUP=\${APP_URL}CallHangup?`);
+    L(`TRANSFERRED_ANSWERED=\${APP_URL}TransferredCallAnswered?`);
     L(`RECORDING=\${APP_URL}Recording?`);
     L(`IVR_DETAIL=\${APP_URL}IVRDetail?`);
     L(`IVR_OPTION_ROUTE=\${APP_URL}IVROptionRoute?`);
@@ -572,14 +573,27 @@ export async function syncDialplanToAsterisk() {
     L(' same => n,Return()');
     L('');
 
-    // ---- [TMain] (blind transfer) ----
+    // ---- [TMain] (blind transfer; CDRID and AgentNumber set by app before redirect) ----
     L('[TMain]');
-    L('exten => _X.,1,NoOp(Blind transfer to ${EXTEN})');
+    L('exten => _X.,1,NoOp(Blind transfer to ${EXTEN} CDRID=${CDRID})');
     L(' same => n,Set(TransferStatus=1)');
     L(' same => n,Set(TransferAgent=${EXTEN})');
     L(` same => n,Set(TransferNotify=\${SHELL(curl -s --connect-timeout 3 --max-time 5 "\${CALL_HANGUP}AgentID=\${AgentNumber}&UniqueID=\${CDRID}&Status=transferred")})`);
-    L(' same => n,Dial(PJSIP/${EXTEN},30)');
+    L(' same => n,Set(CHANNEL(hangup_handler_push)=transfer-hangup,s,1)');
+    L(' same => n,Dial(PJSIP/${EXTEN},30,M(transfer-answered^${CDRID}^${EXTEN}))');
     L(' same => n,Hangup()');
+    L('');
+    L('; ---- [transfer-answered] (B-leg answered; notify app so agent dashboard shows connected) ----');
+    L('[transfer-answered]');
+    L('exten => s,1,NoOp(Transferred call answered UniqueID=${ARG1} AgentID=${ARG2})');
+    L(` same => n,Set(AnsweredNotify=\${SHELL(curl -s --connect-timeout 3 --max-time 5 "\${TRANSFERRED_ANSWERED}UniqueID=\${ARG1}&AgentID=\${ARG2}")})`);
+    L(' same => n,Return()');
+    L('');
+    L('; ---- [transfer-hangup] (transferred call ended; clear target agent status) ----');
+    L('[transfer-hangup]');
+    L('exten => s,1,NoOp(Transfer call hangup CDRID=${CDRID} Agent=${TransferAgent})');
+    L(` same => n,Set(HangupResult=\${SHELL(curl -s --connect-timeout 3 --max-time 5 "\${CALL_HANGUP}AgentID=\${TransferAgent}&UniqueID=\${CDRID}&Status=completed")})`);
+    L(' same => n,Return()');
     L('');
 
     // ---- [BargeMe] (supervisor whisper: supervisor hears agent, can talk to agent only; customer does not hear) ----

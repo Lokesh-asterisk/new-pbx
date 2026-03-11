@@ -400,8 +400,13 @@
 .agent-incoming-popup h3 {
   margin: 0 0 0.5rem;
   font-size: 0.8125rem;
-  color: var(--text-muted);
-  text-transform: uppercase;
+}
+
+.agent-incoming-transfer-from {
+  margin: 0 0 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary);
 }
 
 .agent-incoming-campaign {

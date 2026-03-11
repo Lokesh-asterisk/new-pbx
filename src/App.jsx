@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { BrandingProvider } from './context/BrandingContext';
 import { ProtectedRoute, getRoleRedirectPath } from './components/ProtectedRoute';
 import './App.css';
 
@@ -27,6 +28,7 @@ function RootRedirect() {
 function App() {
   return (
     <AuthProvider>
+      <BrandingProvider>
       <BrowserRouter>
         <Suspense fallback={<PageLoader />}>
         <Routes>
@@ -93,6 +95,7 @@ function App() {
         </Routes>
         </Suspense>
       </BrowserRouter>
+      </BrandingProvider>
     </AuthProvider>
   );
 }

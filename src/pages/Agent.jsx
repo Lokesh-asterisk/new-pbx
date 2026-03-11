@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import AgentExtensionSelect from './AgentExtensionSelect';
 import { useAuth } from '../context/AuthContext';
+import { useBranding } from '../context/BrandingContext';
 import { apiFetch, API_BASE } from '../utils/api';
 import { formatDurationMs } from '../utils/format';
 import './Agent.css';
@@ -62,6 +63,7 @@ function totalBreakMs(breaks, currentBreakStart) {
 export default function Agent() {
   const navigate = useNavigate();
   const { logout } = useAuth();
+  const { branding } = useBranding();
   const [extensionSelected, setExtensionSelected] = useState(false);
   const [statusCheckDone, setStatusCheckDone] = useState(false);
   const [status, setStatus] = useState('available');
@@ -149,6 +151,38 @@ export default function Agent() {
     return () => { cancelled = true; };
   }, [logout]);
 
+  // Periodic status sync: when supervisor ends break (or status changes elsewhere), we get the update within a few seconds even if SSE was missed
+  useEffect(() => {
+    if (!extensionSelected || !statusCheckDone) return;
+    const syncStatus = async () => {
+      try {
+        const res = await apiFetch('/api/agent/status');
+        if (res.status === 401) return;
+        const data = await res.json().catch(() => ({}));
+        if (!data.success || !data.agentStatus) return;
+        const s = String(data.agentStatus).toUpperCase();
+        if (s === 'LOGGEDIN') {
+          setStatus('available');
+          setBreakState(null);
+        } else if (s.includes('BREAK') || s === 'PAUSED') {
+          setStatus('break');
+          if (data.breakStartedAt) {
+            const startMs = new Date(data.breakStartedAt).getTime();
+            setBreakState({ reason: data.breakName || 'other', start: Number.isFinite(startMs) ? startMs : Date.now() - 60000 });
+          } else {
+            setBreakState({ reason: data.breakName || 'other', start: Date.now() - 60000 });
+          }
+        } else if (s === 'RINGING') setStatus('ringing');
+        else if (s === 'ON CALL' || s === 'ONCALL') setStatus('on-call');
+        else if (s === 'OUTBOUND') setStatus('outbound');
+      } catch (_) {}
+    };
+    const interval = setInterval(syncStatus, 15000);
+    const onVisible = () => { if (document.visibilityState === 'visible') syncStatus(); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => { clearInterval(interval); document.removeEventListener('visibilitychange', onVisible); };
+  }, [extensionSelected, statusCheckDone]);
+
   // When extension is selected via UI (e.g. AgentExtensionSelect), init session start if not set
   useEffect(() => {
     if (!extensionSelected || sessionStartTime != null) return;
@@ -207,6 +241,9 @@ export default function Agent() {
             uniqueId: payload.uniqueId,
             queueName: payload.queueName,
             campaignName: payload.campaignName,
+            isTransferred: payload.isTransferred === true,
+            transferFrom: payload.transferFrom || null,
+            transferFromName: payload.transferFromName || null,
           });
           setStatus('ringing');
           setCallState('ringing');
@@ -222,8 +259,15 @@ export default function Agent() {
           setCallState('idle');
           setStatus(payload?.nextStatus === 'Outbound' ? 'outbound' : 'available');
           setInboundInfo((prev) => (prev ? { ...prev, lastCall: prev.lastCall === 'In progress' ? `Ended at ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : prev.lastCall } : prev));
-        } else if (type === 'agent_status' && payload?.callState) {
-          setCallState(payload.callState === 'on_hold' ? 'on_hold' : payload.callState === 'connected' ? 'connected' : 'idle');
+        } else if (type === 'agent_status') {
+          if (payload?.callState) {
+            setCallState(payload.callState === 'on_hold' ? 'on_hold' : payload.callState === 'connected' ? 'connected' : 'idle');
+          }
+          // Supervisor ended this agent's break from wallboard — clear break and show available (Take break)
+          if (payload?.breakEndedBySupervisor === true) {
+            setBreakState(null);
+            setStatus('available');
+          }
         }
       } catch (_) {}
     };
@@ -515,7 +559,7 @@ export default function Agent() {
   const currentStatusOpt = STATUS_OPTIONS.find((o) => o.value === status) || STATUS_OPTIONS[0];
 
   return (
-    <Layout title="Agent" subtitle="PBX Call Centre — Agent Dashboard">
+    <Layout title="Agent" subtitle={`${branding.productName} — Agent Dashboard`}>
       <div className="agent-dashboard">
         {/* Top bar: session info + main actions */}
         <header className="agent-topbar">
@@ -644,7 +688,12 @@ export default function Agent() {
               {/* Incoming call — auto-answered, show connecting indicator */}
               {incomingCall && (
                 <div className="agent-incoming-popup">
-                  <h3>Incoming call</h3>
+                  <h3>{incomingCall.isTransferred ? 'Transferred call' : 'Incoming call'}</h3>
+                  {incomingCall.isTransferred && (incomingCall.transferFrom || incomingCall.transferFromName) && (
+                    <p className="agent-incoming-transfer-from">
+                      Transfer from {incomingCall.transferFromName || `extension ${incomingCall.transferFrom}`}
+                    </p>
+                  )}
                   <p className="agent-incoming-campaign">Campaign: {incomingCall.campaignName || incomingCall.queueName || 'Inbound'}</p>
                   <p className="agent-incoming-number">{incomingCall.customerNumber}</p>
                   {incomingCall.queueName && (

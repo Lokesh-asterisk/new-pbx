@@ -7,11 +7,13 @@ import pbxFeaturesRouter from './superadmin/pbx-features.js';
 import liveMonitoringRouter from './superadmin/live-monitoring.js';
 import cdrReportsRouter from './superadmin/cdr-reports.js';
 import settingsRouter from './superadmin/settings.js';
+import uploadRouter from './superadmin/upload.js';
 
 const router = express.Router();
 
 router.use(requireModuleAccess);
 
+router.use(uploadRouter);
 router.use(usersRouter);
 router.use(sipConfigRouter);
 router.use(routingRouter);

@@ -1,6 +1,11 @@
 import 'dotenv/config';
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
 import express from 'express';
 import cors from 'cors';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 import session from 'express-session';
 import rateLimit from 'express-rate-limit';
 import { asteriskAuthMiddleware } from './utils/asterisk-auth.js';
@@ -11,6 +16,7 @@ import asteriskRoutes from './routes/asterisk.js';
 import wallboardRoutes from './routes/wallboard.js';
 import adminRoutes from './routes/admin.js';
 import reportRoutes from './routes/reports.js';
+import brandingRoutes from './routes/branding.js';
 import { startQueueStasisClient } from './ari-stasis-queue.js';
 import { initRedis } from './redis-wallboard.js';
 import { startReportAggregator } from './report-aggregator.js';
@@ -25,13 +31,16 @@ if (redisUrl) {
   try {
     const { default: RedisStore } = await import('connect-redis');
     const { createClient } = await import('redis');
-    const redisSessionClient = createClient({ url: redisUrl });
-    redisSessionClient.on('error', (err) => console.error('[session-redis]', err.message));
+    const redisSessionClient = createClient({ url: redisUrl, socket: { connectTimeoutMs: 3000, reconnectStrategy: false } });
+    let redisErrLogged = false;
+    redisSessionClient.on('error', (err) => {
+      if (!redisErrLogged) { console.warn('[session-redis]', err.message || 'connection error'); redisErrLogged = true; }
+    });
     await redisSessionClient.connect();
     sessionStore = new RedisStore({ client: redisSessionClient, prefix: 'sess:' });
     console.log('[startup] Session store: Redis');
   } catch (err) {
-    console.warn('[startup] Redis session store unavailable, falling back to MemoryStore:', err.message);
+    console.warn('[startup] Redis session store unavailable, falling back to MemoryStore:', err?.message || err);
     sessionStore = new session.MemoryStore();
   }
 } else {
@@ -82,6 +91,11 @@ app.use('/api/asterisk', asteriskAuthMiddleware, asteriskRoutes);
 app.use('/api/wallboard', wallboardRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/reports', reportRoutes);
+app.use('/api/branding', brandingRoutes);
+
+const uploadsDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+app.use('/uploads', express.static(uploadsDir));
 
 app.get('/api/health', (req, res) => {
   res.json({ ok: true, db: 'pbx_callcentre' });

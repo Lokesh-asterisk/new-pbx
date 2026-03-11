@@ -6,6 +6,7 @@
  */
 import express from 'express';
 import { query, queryOne } from '../db.js';
+import { blacklistMatch } from '../utils/phone.js';
 import {
   createCallRecord,
   setAgentRinging,
@@ -152,17 +153,44 @@ router.get('/InboundRoute', async (req, res) => {
     }
     const tenantId = route.tenant_id;
 
-    // Blacklist: block prank/robocall numbers before they reach the queue
+    // Blacklist: block by exact or pattern (prefix, suffix, contains, regex); log blocked calls for reporting
     const normalizedCaller = normalizeCallerNumber(callerNumber);
     if (normalizedCaller) {
       try {
-        const blocked = await queryOne(
-          'SELECT id FROM blacklist WHERE tenant_id = ? AND number = ? LIMIT 1',
-          [tenantId, normalizedCaller]
-        );
-        if (blocked) {
-          res.set('Content-Type', 'text/plain');
-          return res.send(`HANGUP,0,,,${callUniqueId}`);
+        let blacklistRows;
+        try {
+          blacklistRows = await query(
+            'SELECT id, number, match_type FROM blacklist WHERE tenant_id = ?',
+            [tenantId]
+          );
+        } catch (e) {
+          if (e?.code === 'ER_BAD_FIELD_ERROR') {
+            blacklistRows = await query('SELECT id, number FROM blacklist WHERE tenant_id = ? AND number = ?', [tenantId, normalizedCaller]);
+            if (blacklistRows?.length) {
+              try {
+                await query(
+                  'INSERT INTO blacklist_blocked_calls (tenant_id, caller_number, did, blacklist_entry_id) VALUES (?, ?, ?, ?)',
+                  [tenantId, normalizedCaller, did || null, blacklistRows[0].id]
+                );
+              } catch (_) {}
+              res.set('Content-Type', 'text/plain');
+              return res.send(`HANGUP,0,,,${callUniqueId}`);
+            }
+          }
+          blacklistRows = [];
+        }
+        for (const row of blacklistRows || []) {
+          const matchType = (row.match_type || 'exact').toLowerCase();
+          if (blacklistMatch(normalizedCaller, row.number, matchType)) {
+            try {
+              await query(
+                'INSERT INTO blacklist_blocked_calls (tenant_id, caller_number, did, blacklist_entry_id) VALUES (?, ?, ?, ?)',
+                [tenantId, normalizedCaller, did || null, row.id]
+              );
+            } catch (_) {}
+            res.set('Content-Type', 'text/plain');
+            return res.send(`HANGUP,0,,,${callUniqueId}`);
+          }
         }
       } catch (_) {
         // blacklist table may not exist yet
@@ -409,6 +437,24 @@ router.all('/CallAnswered', async (req, res) => {
     res.json({ ok: true });
   } catch (err) {
     console.error('Asterisk CallAnswered error:', err);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// TransferredCallAnswered - when a transferred call is answered by the target extension (from TMain Dial M()).
+// AgentID = target extension; UniqueID = call unique_id. Updates target agent to On Call and broadcasts call_answered.
+router.all('/TransferredCallAnswered', async (req, res) => {
+  try {
+    const agentId = parseQuery(req, 'AgentID') || parseQuery(req, 'agent_id');
+    const uniqueId = parseQuery(req, 'UniqueID') || parseQuery(req, 'unique_id');
+    if (!agentId || !uniqueId) {
+      res.status(400).json({ ok: false, error: 'AgentID and UniqueID required' });
+      return;
+    }
+    await setAgentAnswered(String(agentId).replace(/\D/g, ''), uniqueId);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Asterisk TransferredCallAnswered error:', err);
     res.status(500).json({ ok: false, error: err.message });
   }
 });

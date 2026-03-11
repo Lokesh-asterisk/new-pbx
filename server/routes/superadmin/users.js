@@ -186,6 +186,8 @@ function normalizeTenantHas(row) {
   };
 }
 
+const BRANDING_COLS = 'product_name, logo_url, tagline, primary_color, favicon_url';
+
 router.get('/tenants', async (req, res) => {
   try {
     const effectiveTenantId = getEffectiveTenantId(req);
@@ -193,6 +195,7 @@ router.get('/tenants', async (req, res) => {
     if (effectiveTenantId != null) {
       const row = await queryOne(
         `SELECT id, name, created_at, COALESCE(mask_caller_number_agent, 0) AS mask_caller_number_agent,
+         ${BRANDING_COLS},
          (SELECT 1 FROM users u WHERE u.parent_id = tenants.id LIMIT 1) AS has_users,
          (SELECT 1 FROM sip_extensions e WHERE e.tenant_id = tenants.id LIMIT 1) AS has_extensions,
          (SELECT 1 FROM sip_trunks st WHERE st.tenant_id = tenants.id LIMIT 1) AS has_trunks,
@@ -208,6 +211,7 @@ router.get('/tenants', async (req, res) => {
       try {
         rows = await query(
           `SELECT t.id, t.name, t.created_at, COALESCE(t.mask_caller_number_agent, 0) AS mask_caller_number_agent,
+           t.product_name, t.logo_url, t.tagline, t.primary_color, t.favicon_url,
            (SELECT 1 FROM users u WHERE u.parent_id = t.id LIMIT 1) AS has_users,
            (SELECT 1 FROM sip_extensions e WHERE e.tenant_id = t.id LIMIT 1) AS has_extensions,
            (SELECT 1 FROM sip_trunks st WHERE st.tenant_id = t.id LIMIT 1) AS has_trunks,
@@ -253,6 +257,74 @@ router.post('/tenants', validate(createTenantSchema), async (req, res) => {
       success: false,
       error: err.message || 'Failed to create tenant',
     });
+  }
+});
+
+const VALID_HEX_COLOR = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
+function sanitizeUrl(val, maxLen = 512) {
+  if (val == null) return null;
+  const s = String(val).trim();
+  if (!s) return null;
+  if (s.length > maxLen) return null;
+  if (/^javascript:/i.test(s) || /^data:/i.test(s)) return null;
+  return s;
+}
+
+router.patch('/tenants/:id', async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (!id || isNaN(id)) return res.status(400).json({ success: false, error: 'Invalid tenant ID' });
+    const existing = await queryOne('SELECT id FROM tenants WHERE id = ?', [id]);
+    if (!existing) return res.status(404).json({ success: false, error: 'Tenant not found' });
+    const effectiveTenantId = getEffectiveTenantId(req);
+    if (effectiveTenantId != null && Number(effectiveTenantId) !== id) {
+      return res.status(403).json({ success: false, error: 'You can only edit your own tenant' });
+    }
+
+    const b = req.body || {};
+    const sets = [];
+    const params = [];
+
+    if (b.name != null) {
+      const name = String(b.name).trim();
+      if (!name) return res.status(400).json({ success: false, error: 'Tenant name required' });
+      sets.push('name = ?'); params.push(name);
+    }
+    if (b.mask_caller_number_agent != null) {
+      sets.push('mask_caller_number_agent = ?'); params.push(Number(b.mask_caller_number_agent) ? 1 : 0);
+    }
+    if (b.product_name !== undefined) {
+      const v = b.product_name ? String(b.product_name).trim().slice(0, 128) : null;
+      sets.push('product_name = ?'); params.push(v || null);
+    }
+    if (b.logo_url !== undefined) {
+      sets.push('logo_url = ?'); params.push(sanitizeUrl(b.logo_url));
+    }
+    if (b.tagline !== undefined) {
+      const v = b.tagline ? String(b.tagline).trim().slice(0, 255) : null;
+      sets.push('tagline = ?'); params.push(v || null);
+    }
+    if (b.primary_color !== undefined) {
+      let c = b.primary_color ? String(b.primary_color).trim() : null;
+      if (c && !VALID_HEX_COLOR.test(c)) c = null;
+      sets.push('primary_color = ?'); params.push(c);
+    }
+    if (b.favicon_url !== undefined) {
+      sets.push('favicon_url = ?'); params.push(sanitizeUrl(b.favicon_url));
+    }
+
+    if (!sets.length) return res.status(400).json({ success: false, error: 'Nothing to update' });
+    params.push(id);
+    await query(`UPDATE tenants SET ${sets.join(', ')} WHERE id = ?`, params);
+    const updated = await queryOne(
+      `SELECT id, name, created_at, COALESCE(mask_caller_number_agent, 0) AS mask_caller_number_agent,
+       ${BRANDING_COLS} FROM tenants WHERE id = ?`,
+      [id]
+    );
+    return res.json({ success: true, tenant: updated });
+  } catch (err) {
+    console.error('Superadmin update tenant error:', err);
+    return res.status(500).json({ success: false, error: 'Failed to update tenant' });
   }
 });
 

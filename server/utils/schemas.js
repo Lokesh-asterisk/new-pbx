@@ -27,7 +27,7 @@ export const breakStartSchema = z.object({
 });
 
 export const breakEndSchema = z.object({
-  startTime: optStr,
+  startTime: z.union([z.string(), z.number()]).optional(),
   reason: optStr,
 });
 
@@ -50,8 +50,6 @@ export const callExtensionSchema = z.object({
 export const channelActionSchema = z.object({
   channel_id: optStr,
   channelId: optStr,
-}).refine(d => d.channel_id || d.channelId, {
-  message: 'channel_id is required',
 });
 
 export const transferSchema = z.object({
@@ -73,7 +71,8 @@ export const dialSchema = z.object({
 
 export const blacklistSchema = z.object({
   tenant_id: optPosInt,
-  number: str.min(1, 'Phone number is required'),
+  number: str.min(1, 'Number or pattern is required'),
+  match_type: z.enum(['exact', 'prefix', 'suffix', 'contains', 'regex']).optional().default('exact'),
 });
 
 export const monitorSchema = z.object({

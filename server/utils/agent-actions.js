@@ -6,14 +6,14 @@ import { query, queryOne } from '../db.js';
 import { forceLogoutAgent } from '../ari-stasis-queue.js';
 import { endAgentSession, logAgentStatusChange } from '../agent-sessions.js';
 import { destroySessionsForUser } from '../session-utils.js';
-import { broadcastToWallboard } from '../realtime.js';
+import { broadcastToWallboard, broadcastToAgent } from '../realtime.js';
 
 export async function performForceEndBreak(agentId, tenantId) {
-  const row = await queryOne(
-    'SELECT 1 FROM users WHERE phone_login_number = ? AND role = 5 LIMIT 1',
+  const userRow = await queryOne(
+    'SELECT id FROM users WHERE phone_login_number = ? AND role = 5 LIMIT 1',
     [agentId]
   );
-  if (!row) return { success: false, status: 404, error: 'Agent not found' };
+  if (!userRow) return { success: false, status: 404, error: 'Agent not found' };
 
   if (!tenantId) {
     const tenantRow = await queryOne(
@@ -35,6 +35,12 @@ export async function performForceEndBreak(agentId, tenantId) {
     });
     logAgentStatusChange(tenantId, agentId, 'READY').catch(() => {});
   }
+
+  // Notify the agent's dashboard so it clears break state and shows "Take break" (available)
+  broadcastToAgent(userRow.id, {
+    type: 'agent_status',
+    payload: { status: 'LOGGEDIN', breakEndedBySupervisor: true },
+  });
 
   return { success: true, message: 'Agent set to Available' };
 }

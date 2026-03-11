@@ -63,14 +63,26 @@ router.get('/blacklist', async (req, res) => {
       }
       tenantId = adminTenant;
     }
-    let sql = 'SELECT id, tenant_id, number, created_at FROM blacklist';
+    let sql = 'SELECT id, tenant_id, number, match_type, created_at FROM blacklist';
     const params = [];
     if (tenantId != null && !Number.isNaN(tenantId) && tenantId >= 1) {
       sql += ' WHERE tenant_id = ?';
       params.push(tenantId);
     }
     sql += ' ORDER BY tenant_id, number';
-    const rows = await query(sql, params);
+    let rows;
+    try {
+      rows = await query(sql, params);
+    } catch (e) {
+      if (e?.code === 'ER_BAD_FIELD_ERROR') {
+        sql = 'SELECT id, tenant_id, number, created_at FROM blacklist';
+        if (tenantId != null && !Number.isNaN(tenantId) && tenantId >= 1) {
+          sql += ' WHERE tenant_id = ?';
+        }
+        sql += ' ORDER BY tenant_id, number';
+        rows = (await query(sql, params)).map((r) => ({ ...r, match_type: 'exact' }));
+      } else throw e;
+    }
     return res.json({ success: true, list: rows });
   } catch (err) {
     if (err?.code === 'ER_NO_SUCH_TABLE') {
@@ -85,7 +97,7 @@ router.post('/blacklist', validate(blacklistSchema), async (req, res) => {
   try {
     const user = req.session?.user;
     const isSuperadmin = user?.role === 'superadmin' || user?.role === 1;
-    let { tenant_id: tenantIdParam, number } = req.body || {};
+    let { tenant_id: tenantIdParam, number, match_type: matchType } = req.body || {};
     const tenantId = parseInt(tenantIdParam, 10);
     if (!Number.isFinite(tenantId) || tenantId < 1) {
       return res.status(400).json({ success: false, error: 'Valid tenant_id required' });
@@ -96,22 +108,42 @@ router.post('/blacklist', validate(blacklistSchema), async (req, res) => {
         return res.status(403).json({ success: false, error: 'Can only add blacklist for your tenant' });
       }
     }
-    const normalized = normalizePhoneForBlacklist(number);
-    if (!normalized) {
-      return res.status(400).json({ success: false, error: 'Valid phone number required' });
+    const type = (matchType || 'exact').toLowerCase();
+    const value = (number || '').toString().trim();
+    if (!value) {
+      return res.status(400).json({ success: false, error: 'Number or pattern required' });
+    }
+    const stored = type === 'exact' ? normalizePhoneForBlacklist(value) : value;
+    if (type === 'exact' && !stored) {
+      return res.status(400).json({ success: false, error: 'Valid phone number required for exact match' });
     }
     await query(
-      'INSERT INTO blacklist (tenant_id, number) VALUES (?, ?)',
-      [tenantId, normalized]
+      'INSERT INTO blacklist (tenant_id, number, match_type) VALUES (?, ?, ?)',
+      [tenantId, stored, type]
     );
-    const row = await queryOne('SELECT id, tenant_id, number, created_at FROM blacklist WHERE tenant_id = ? AND number = ? ORDER BY id DESC LIMIT 1', [tenantId, normalized]);
+    const row = await queryOne(
+      'SELECT id, tenant_id, number, match_type, created_at FROM blacklist WHERE tenant_id = ? AND number = ? AND match_type = ? ORDER BY id DESC LIMIT 1',
+      [tenantId, stored, type]
+    );
     return res.json({ success: true, entry: row });
   } catch (err) {
     if (err?.code === 'ER_DUP_ENTRY' || err?.errno === 1062) {
-      return res.status(400).json({ success: false, error: 'Number already blacklisted' });
+      return res.status(400).json({ success: false, error: 'This number or pattern is already blacklisted for this match type' });
     }
     if (err?.code === 'ER_NO_SUCH_TABLE') {
       return res.status(500).json({ success: false, error: 'Blacklist table not found. Run migration 011_blacklist.sql.' });
+    }
+    if (err?.code === 'ER_BAD_FIELD_ERROR') {
+      const normalized = normalizePhoneForBlacklist(number || '');
+      if (!normalized) return res.status(400).json({ success: false, error: 'Valid phone number required' });
+      try {
+        await query('INSERT INTO blacklist (tenant_id, number) VALUES (?, ?)', [tenantId, normalized]);
+        const row = await queryOne('SELECT id, tenant_id, number, created_at FROM blacklist WHERE tenant_id = ? AND number = ? ORDER BY id DESC LIMIT 1', [tenantId, normalized]);
+        return res.json({ success: true, entry: { ...row, match_type: 'exact' } });
+      } catch (e2) {
+        if (e2?.code === 'ER_DUP_ENTRY' || e2?.errno === 1062) return res.status(400).json({ success: false, error: 'Number already blacklisted' });
+        throw e2;
+      }
     }
     console.error('Admin blacklist create error:', err);
     return res.status(500).json({ success: false, error: 'Failed to add to blacklist' });
@@ -141,6 +173,82 @@ router.delete('/blacklist/:id', async (req, res) => {
   } catch (err) {
     console.error('Admin blacklist delete error:', err);
     return res.status(500).json({ success: false, error: 'Failed to delete' });
+  }
+});
+
+// GET /blacklist/blocked-calls — report of calls blocked by blacklist (historical + recent for live view)
+router.get('/blacklist/blocked-calls', async (req, res) => {
+  try {
+    const user = req.session?.user;
+    const isSuperadmin = user?.role === 'superadmin' || user?.role === 1;
+    let tenantId = req.query.tenant_id != null && req.query.tenant_id !== '' ? parseInt(req.query.tenant_id, 10) : null;
+    if (!isSuperadmin && (user?.parent_id != null || user?.tenant_id != null)) {
+      const adminTenant = user.parent_id ?? user.tenant_id;
+      if (tenantId != null && tenantId !== adminTenant) {
+        return res.status(403).json({ success: false, error: 'Access limited to your tenant' });
+      }
+      tenantId = adminTenant;
+    }
+    let from = (req.query.from || req.query.date_from || '').toString().trim();
+    let to = (req.query.to || req.query.date_to || '').toString().trim();
+    // Date-only (YYYY-MM-DD): treat "to" as end-of-day so the range is inclusive
+    if (to && /^\d{4}-\d{2}-\d{2}$/.test(to)) to = `${to} 23:59:59`;
+    if (from && /^\d{4}-\d{2}-\d{2}$/.test(from)) from = `${from} 00:00:00`;
+
+    const number = (req.query.number || req.query.caller || '').toString().trim().replace(/\D/g, '');
+    const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 500, 1), 2000);
+    const recentOnly = req.query.recent === '1' || req.query.recent === 'true';
+
+    let sql = `SELECT b.id, b.tenant_id, b.caller_number, b.did, b.blacklist_entry_id, b.blocked_at
+               FROM blacklist_blocked_calls b`;
+    const params = [];
+    const conditions = [];
+    if (tenantId != null && !Number.isNaN(tenantId) && tenantId >= 1) {
+      conditions.push('b.tenant_id = ?');
+      params.push(tenantId);
+    }
+    if (from) {
+      conditions.push('b.blocked_at >= ?');
+      params.push(from);
+    }
+    if (to) {
+      conditions.push('b.blocked_at <= ?');
+      params.push(to);
+    }
+    if (number) {
+      conditions.push('b.caller_number LIKE ?');
+      params.push(`%${number}%`);
+    }
+    if (conditions.length) sql += ' WHERE ' + conditions.join(' AND ');
+    // LIMIT as bound param can cause ER_WRONG_ARGUMENTS on some MySQL/mysql2; use validated integer inline
+    sql += ` ORDER BY b.blocked_at DESC LIMIT ${limit}`;
+
+    let rows = [];
+    try {
+      rows = await query(sql, params);
+    } catch (e) {
+      if (e?.code === 'ER_NO_SUCH_TABLE') {
+        return res.json({ success: true, list: [], total: 0 });
+      }
+      throw e;
+    }
+
+    let total = null;
+    if (!recentOnly) {
+      try {
+        let countSql = 'SELECT COUNT(*) AS n FROM blacklist_blocked_calls b';
+        if (conditions.length) countSql += ' WHERE ' + conditions.join(' AND ');
+        const countRow = await queryOne(countSql, params);
+        total = countRow?.n ?? rows.length;
+      } catch (_) {
+        total = rows.length;
+      }
+    }
+
+    return res.json({ success: true, list: rows, total: total ?? rows.length });
+  } catch (err) {
+    console.error('Admin blacklist blocked-calls error:', err);
+    return res.status(500).json({ success: false, error: err.message || 'Failed to load blocked calls' });
   }
 });
 
