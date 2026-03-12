@@ -196,8 +196,18 @@ async function notifyAgentForQueueCall(channelId, callerNumber, queueName, uniqu
   return true;
 }
 
+function normalizeStasisArgs(args) {
+  if (!Array.isArray(args)) return [];
+  if (args.length === 1 && typeof args[0] === 'string' && args[0].includes(',')) {
+    return args[0].split(',').map((s) => s.trim());
+  }
+  return args;
+}
+
 async function onStasisStart(event) {
-  const { channel, args = [] } = event;
+  let args = event.args || [];
+  args = normalizeStasisArgs(args);
+  const { channel } = event;
   if (!channel?.id) return;
   const channelId = channel.id;
   const callerNumber = (channel.caller?.number || channel.caller?.name || '').toString().trim();
@@ -220,9 +230,31 @@ async function onStasisStart(event) {
 
   // Supervisor barge/listen: 2 args [bridgeId, mode]
   if (args.length >= 2 && (args[1] === 'barge' || args[1] === 'listen')) {
-    const bridgeId = args[0];
+    const bridgeId = String(args[0] || '').trim();
     const mode = args[1];
-    pendingSupervisorJoin.set(channelId, { bridgeId, mode });
+    if (!bridgeId) return;
+    const chanState = (channel.state || '').toLowerCase();
+    if (chanState === 'up') {
+      // Channel already answered (StasisStart can arrive after answer in some setups)
+      // Explicit ARI answer so media is established before adding to bridge (fixes no audio to supervisor)
+      await answerChannel(channelId).catch(() => {});
+      const res = await addChannelToBridge(bridgeId, channelId);
+      if (res.status === 200 || res.status === 204) {
+        if (mode === 'listen') {
+          await muteChannel(channelId).catch((e) => console.error('[ari-stasis-queue] mute supervisor channel:', e.message));
+        }
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('[ari-stasis-queue] Supervisor joined bridge (from StasisStart, already Up)', bridgeId, 'mode', mode);
+        }
+      } else {
+        console.error('[ari-stasis-queue] Supervisor add to bridge failed (StasisStart):', res.status, res.body || '', 'bridgeId=', bridgeId);
+      }
+    } else {
+      pendingSupervisorJoin.set(channelId, { bridgeId, mode });
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('[ari-stasis-queue] Supervisor monitor: channel', channelId, 'pending join bridge', bridgeId, 'mode', mode);
+      }
+    }
     return;
   }
 
@@ -388,12 +420,24 @@ async function onChannelStateChange(event) {
   const supervisorInfo = pendingSupervisorJoin.get(channel.id);
   if (supervisorInfo) {
     const { bridgeId, mode } = supervisorInfo;
+    // Explicit ARI answer so media is established before adding to bridge (fixes no audio to supervisor)
+    await answerChannel(channel.id).catch(() => {});
     const res = await addChannelToBridge(bridgeId, channel.id);
+    let muteStatus = null;
+    if ((res.status === 200 || res.status === 204) && mode === 'listen') {
+      const muteRes = await muteChannel(channel.id).catch((e) => ({ status: 0, body: e?.message }));
+      muteStatus = muteRes?.status ?? muteRes?.body;
+    }
     if (res.status === 200 || res.status === 204) {
-      if (mode === 'listen') {
+      if (mode === 'listen' && muteStatus === null) {
         await muteChannel(channel.id).catch((e) => console.error('[ari-stasis-queue] mute supervisor channel:', e.message));
       }
       pendingSupervisorJoin.delete(channel.id);
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('[ari-stasis-queue] Supervisor joined bridge', bridgeId, 'mode', mode);
+      }
+    } else {
+      console.error('[ari-stasis-queue] Supervisor add to bridge failed:', res.status, res.body || '', 'bridgeId=', bridgeId);
     }
     return;
   }

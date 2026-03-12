@@ -62,8 +62,10 @@ export function BrandingProvider({ children }) {
   useEffect(() => {
     if (branding.primaryColor) {
       document.documentElement.style.setProperty('--brand-primary', branding.primaryColor);
+      document.documentElement.style.setProperty('--brand-primary-hover', branding.primaryColor);
     } else {
       document.documentElement.style.removeProperty('--brand-primary');
+      document.documentElement.style.removeProperty('--brand-primary-hover');
     }
   }, [branding.primaryColor]);
 

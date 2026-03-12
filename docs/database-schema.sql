@@ -13,7 +13,7 @@ USE pbx_callcentre;
 
 CREATE TABLE IF NOT EXISTS users (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  username VARCHAR(64) NOT NULL UNIQUE,
+  username VARCHAR(64) NOT NULL,
   password_hash VARCHAR(255) NOT NULL,
   email VARCHAR(255) DEFAULT NULL,
   role TINYINT UNSIGNED NOT NULL DEFAULT 3,
@@ -32,7 +32,9 @@ CREATE TABLE IF NOT EXISTS users (
   last_login_at DATETIME DEFAULT NULL,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uk_parent_username (parent_id, username),
   INDEX idx_parent (parent_id),
+  INDEX idx_username (username),
   INDEX idx_role (role),
   INDEX idx_permission_group (permission_group_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

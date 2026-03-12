@@ -70,8 +70,16 @@ CREATE TABLE IF NOT EXISTS queue_daily_stats (
 -- Extend agent_daily_stats with additional performance columns (sales, score, ready_time).
 -- MySQL < 10.0 / MariaDB < 10.0.2 does not support ADD COLUMN IF NOT EXISTS,
 -- so we use a stored procedure to add columns safely.
+-- Drop only if procedure exists to avoid 1305 warning in Workbench on first run.
 
-DROP PROCEDURE IF EXISTS _add_col_if_missing;
+SET @_drop = (SELECT IF(
+  (SELECT COUNT(*) FROM information_schema.ROUTINES WHERE ROUTINE_SCHEMA = DATABASE() AND ROUTINE_NAME = '_add_col_if_missing') > 0,
+  'DROP PROCEDURE _add_col_if_missing',
+  'SELECT 1'
+));
+PREPARE stmt FROM @_drop;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
 DELIMITER $$
 CREATE PROCEDURE _add_col_if_missing(

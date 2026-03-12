@@ -96,6 +96,53 @@ export async function hangupChannel(channelId) {
 }
 
 /**
+ * Get channel details by ID. Returns { name, state, ... } or null.
+ * name is the Asterisk channel name (e.g. PJSIP/7001-00000001) used by ChanSpy in dialplan.
+ * @param {string} channelId - ARI channel ID
+ * @returns {Promise<{ name: string, state: string, [key: string]: unknown } | null>}
+ */
+export async function getChannel(channelId) {
+  if (!channelId) return null;
+  const res = await ariRequest(`/ari/channels/${encodeURIComponent(channelId)}`, { method: 'GET', timeoutMs: 5000 });
+  if (res.status !== 200 || !res.body) return null;
+  try {
+    return JSON.parse(res.body);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * List all active ARI channels (for server health / active calls).
+ * @returns {Promise<Array<{ id: string, name: string, state: string }>>}
+ */
+export async function listChannels() {
+  const res = await ariRequest('/ari/channels', { method: 'GET', timeoutMs: 5000 });
+  if (res.status !== 200 || !res.body) return [];
+  try {
+    const data = JSON.parse(res.body);
+    return Array.isArray(data) ? data : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * List ARI endpoints (PJSIP) for registered agents count.
+ * @returns {Promise<Array<{ resource: string, state: string }>>}
+ */
+export async function listEndpoints() {
+  const res = await ariRequest('/ari/endpoints', { method: 'GET', timeoutMs: 5000 });
+  if (res.status !== 200 || !res.body) return [];
+  try {
+    const data = JSON.parse(res.body);
+    return Array.isArray(data) ? data : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
  * Get a channel variable (e.g. CampaignName set by dialplan before Stasis).
  * @param {string} channelId - Channel id
  * @param {string} variableName - Variable name (e.g. "CampaignName")
@@ -227,13 +274,23 @@ export async function unholdChannel(channelId) {
 }
 
 /**
- * Mute a channel (outbound audio only). Used for listen-only supervisor on bridge.
+ * Mute a channel's outbound audio (supervisor cannot be heard by others on the bridge).
+ * Used for listen-only supervisor: supervisor hears bridge but does not send to bridge.
+ * Tries direction 'out' first; if ARI rejects (e.g. older Asterisk), falls back to mute without body.
  * @param {string} channelId
  * @returns {Promise<{ status: number, body: string }>}
  */
 export async function muteChannel(channelId) {
   if (!channelId) return { status: 0, body: '' };
-  return ariRequest(`/ari/channels/${encodeURIComponent(channelId)}/mute`, { method: 'POST' });
+  const url = `/ari/channels/${encodeURIComponent(channelId)}/mute`;
+  const withDirection = await ariRequest(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ direction: 'out' }),
+    timeoutMs: 5000,
+  });
+  if (withDirection.status === 200 || withDirection.status === 204) return withDirection;
+  return ariRequest(url, { method: 'POST', timeoutMs: 5000 });
 }
 
 /**

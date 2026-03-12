@@ -9,9 +9,18 @@ export function roleName(roleId) {
 
 export async function findUserByUsername(username) {
   return queryOne(
-    'SELECT id, username, password_hash, email, role, parent_id, account_status, permission_group_id, change_password_required, phone_login_name, phone_login_number FROM users WHERE username = ? LIMIT 1',
+    'SELECT id, username, password_hash, email, role, parent_id, account_status, permission_group_id, change_password_required, phone_login_name, phone_login_number FROM users WHERE username = ? ORDER BY parent_id ASC, id ASC LIMIT 1',
     [username]
   );
+}
+
+/** All users with this username (multiple tenants). Used at login to try password against each when username is not globally unique. */
+export async function findUsersByUsername(username) {
+  const rows = await query(
+    'SELECT id, username, password_hash, email, role, parent_id, account_status, permission_group_id, change_password_required, phone_login_name, phone_login_number FROM users WHERE username = ? ORDER BY parent_id ASC, id ASC',
+    [username]
+  );
+  return rows || [];
 }
 
 export async function verifyLogin(username, password) {

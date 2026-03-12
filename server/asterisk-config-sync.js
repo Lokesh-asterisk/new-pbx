@@ -596,17 +596,27 @@ export async function syncDialplanToAsterisk() {
     L(' same => n,Return()');
     L('');
 
-    // ---- [BargeMe] (supervisor whisper: supervisor hears agent, can talk to agent only; customer does not hear) ----
+    // ---- [BargeMe] (supervisor listen/whisper/barge via ChanSpy; SpyParameter: bq=listen, qw=whisper, Bq=barge) ----
     L('[BargeMe]');
-    L('exten => s,1,NoOp(BargeMe whisper on ${BargeChannel})');
-    L(' same => n,ChanSpy(${BargeChannel},qw)');
+    L('exten => s,1,NoOp(BargeMe ${SpyParameter} on ${BargeChannel})');
+    L(' same => n,Answer()');
+    L(' same => n,ChanSpy(${BargeChannel},${SpyParameter})');
     L(' same => n,Hangup()');
     L('');
 
     const content = lines.join('\n');
+    const bargeMeSnippet = content.includes('[BargeMe]')
+      ? content.split('[BargeMe]')[1].split('\n\n')[0].trim()
+      : '';
+    if (!CONFIG_API_URL) {
+      console.warn('Asterisk dialplan sync skipped: ASTERISK_CONFIG_API_URL is not set in .env');
+      return { skipped: true, bargeMeSnippet };
+    }
     const result = await postConfig('/config/dialplan', { content });
-    if (result.skipped) return;
+    if (result.skipped) return { skipped: true, bargeMeSnippet };
     console.log('Asterisk dialplan (callcentre.conf) synced successfully');
+    if (bargeMeSnippet && process.env.NODE_ENV !== 'production') console.log('BargeMe:', bargeMeSnippet);
+    return { sent: true, bargeMeSnippet };
   } catch (err) {
     console.error('Asterisk dialplan sync error:', err.message || err);
     throw err;
@@ -622,6 +632,7 @@ export async function syncAllToAsterisk() {
     return { success: false, skipped: true, message: 'ASTERISK_CONFIG_API_URL is not set in .env. Sync skipped.' };
   }
   const errors = [];
+  let dialplanResult = {};
   try {
     await syncAgentsToAsterisk();
   } catch (e) {
@@ -638,12 +649,13 @@ export async function syncAllToAsterisk() {
     errors.push(`Trunks: ${e.message || e}`);
   }
   try {
-    await syncDialplanToAsterisk();
+    dialplanResult = await syncDialplanToAsterisk();
   } catch (e) {
     errors.push(`Dialplan: ${e.message || e}`);
   }
   if (errors.length) {
     return { success: false, skipped: false, message: errors.join('; '), errors };
   }
-  return { success: true, skipped: false, message: 'Config synced to Asterisk (agents, extensions, trunks, dialplan). Run "dialplan reload" and "module reload res_pjsip.so" if needed.' };
+  const msg = 'Config synced to Asterisk (agents, extensions, trunks, dialplan). Run "dialplan reload" and "module reload res_pjsip.so" if needed.';
+  return { success: true, skipped: false, message: msg, bargeMeSnippet: dialplanResult.bargeMeSnippet };
 }

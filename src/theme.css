@@ -3,14 +3,19 @@
    ═══════════════════════════════════════════════════════════ */
 
 :root {
+  /* Accent & focus (brand-primary set by BrandingContext when tenant has primary_color) */
+  --accent: var(--brand-primary, #3b82f6);
+  --accent-hover: var(--brand-primary-hover, #2563eb);
+  --focus-ring: 0 0 0 2px var(--bg-page), 0 0 0 4px var(--accent);
+
   /* Backgrounds */
   --bg-page: #0f172a;
   --bg-surface: #1e293b;
   --bg-elevated: #334155;
   --bg-input: #1e293b;
-  --bg-hover: rgba(59, 130, 246, 0.08);
+  --bg-hover: rgba(59, 130, 246, 0.1);
   --bg-overlay: rgba(0, 0, 0, 0.6);
-  --bg-card-glass: rgba(30, 41, 59, 0.9);
+  --bg-card-glass: rgba(30, 41, 59, 0.92);
   --bg-card-border: rgba(71, 85, 105, 0.5);
 
   /* Text */
@@ -20,6 +25,14 @@
   --text-placeholder: #64748b;
   --text-label: #cbd5e1;
 
+  /* Semantic */
+  --color-error: #f87171;
+  --color-error-bg: rgba(248, 113, 113, 0.12);
+  --color-success: #4ade80;
+  --color-success-bg: rgba(74, 222, 128, 0.12);
+  --color-warning: #fbbf24;
+  --color-warning-bg: rgba(251, 191, 36, 0.12);
+
   /* Borders */
   --border-default: #334155;
   --border-subtle: #475569;
@@ -28,27 +41,33 @@
   --shadow-card: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.3);
+  --shadow-header: 0 1px 0 0 var(--border-default);
 
   /* Scrollbar */
   --scrollbar-bg: #1e293b;
   --scrollbar-thumb: #475569;
+  --scrollbar-thumb-hover: #64748b;
 
   /* Table */
   --table-header-bg: #1e293b;
-  --table-row-hover: rgba(59, 130, 246, 0.06);
+  --table-row-hover: rgba(59, 130, 246, 0.08);
   --table-stripe: rgba(30, 41, 59, 0.5);
 }
 
 [data-theme="light"] {
+  --accent: var(--brand-primary, #2563eb);
+  --accent-hover: var(--brand-primary-hover, #1d4ed8);
+  --focus-ring: 0 0 0 2px var(--bg-page), 0 0 0 4px var(--accent);
+
   /* Backgrounds */
   --bg-page: #f1f5f9;
   --bg-surface: #ffffff;
-  --bg-elevated: #e2e8f0;
+  --bg-elevated: #f1f5f9;
   --bg-input: #ffffff;
-  --bg-hover: rgba(59, 130, 246, 0.06);
+  --bg-hover: rgba(37, 99, 235, 0.06);
   --bg-overlay: rgba(0, 0, 0, 0.4);
-  --bg-card-glass: rgba(255, 255, 255, 0.95);
-  --bg-card-border: rgba(203, 213, 225, 0.6);
+  --bg-card-glass: rgba(255, 255, 255, 0.98);
+  --bg-card-border: rgba(226, 232, 240, 0.8);
 
   /* Text */
   --text-primary: #0f172a;
@@ -57,33 +76,87 @@
   --text-placeholder: #94a3b8;
   --text-label: #475569;
 
+  /* Semantic */
+  --color-error: #dc2626;
+  --color-error-bg: rgba(220, 38, 38, 0.08);
+  --color-success: #16a34a;
+  --color-success-bg: rgba(22, 163, 74, 0.08);
+  --color-warning: #ca8a04;
+  --color-warning-bg: rgba(202, 138, 4, 0.08);
+
   /* Borders */
   --border-default: #e2e8f0;
   --border-subtle: #cbd5e1;
 
   /* Shadows */
-  --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.08);
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
+  --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-header: 0 1px 3px rgba(0, 0, 0, 0.06);
 
   /* Scrollbar */
   --scrollbar-bg: #f1f5f9;
   --scrollbar-thumb: #cbd5e1;
+  --scrollbar-thumb-hover: #94a3b8;
 
   /* Table */
   --table-header-bg: #f8fafc;
-  --table-row-hover: rgba(59, 130, 246, 0.04);
-  --table-stripe: rgba(241, 245, 249, 0.5);
+  --table-row-hover: rgba(37, 99, 235, 0.04);
+  --table-stripe: rgba(241, 245, 249, 0.6);
 }
 
-/* Smooth transitions when toggling themes */
-*,
-*::before,
-*::after {
-  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+/* Smooth theme transitions — only theme-dependent properties, avoid input flicker */
+body,
+.app-layout,
+.app-header,
+.app-main,
+.login-page,
+.login-card,
+.stat-card,
+.dashboard-table-wrap,
+.action-btn,
+.btn-logout,
+.btn-theme-toggle,
+.header-logo,
+.card-grid .stat-card {
+  transition: background-color 0.25s ease, border-color 0.25s ease, color 0.2s ease, box-shadow 0.25s ease;
 }
 
-/* Opt out of transition for elements that shouldn't animate */
-input, textarea, select, .no-transition {
+input, textarea, select, [contenteditable], .no-transition {
   transition: none;
+}
+
+/* Scrollbar theming */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-bg);
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: var(--scrollbar-bg);
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 4px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+}
+
+/* Global focus and error styles so all pages benefit */
+.action-btn:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.dashboard-error,
+.superadmin-error {
+  color: var(--color-error);
 }

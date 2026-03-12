@@ -1,6 +1,6 @@
 import express from 'express';
 import { query, queryOne } from '../../db.js';
-import { originateIntoStasis, originateToContext, getQueueStasisAppName, isAriConfigured } from '../../asterisk-ari.js';
+import { originateToContext, isAriConfigured, getChannel } from '../../asterisk-ari.js';
 import { getBridgedCallInfo, forceLogoutAgent } from '../../ari-stasis-queue.js';
 import { destroySessionsForUser } from '../../session-utils.js';
 import { endAgentSession } from '../../agent-sessions.js';
@@ -214,23 +214,21 @@ router.post('/live-agents/:agentId/monitor', requireSuperadmin, validate(monitor
       return res.status(400).json({ success: false, error: 'Agent not on a bridged call' });
     }
     const channelId = `Supervisor-${ext}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    const app = getQueueStasisAppName();
     const timeout = 45;
-    if (mode === 'barge' || mode === 'listen') {
-      const result = await originateIntoStasis(channelId, `PJSIP/${ext}`, app, [callInfo.bridgeId, mode], timeout);
-      if (result.status !== 200 && result.status !== 201) {
-        const errMsg = result.body || 'Originate failed';
-        return res.status(502).json({ success: false, error: errMsg });
-      }
-    } else {
-      const result = await originateToContext(channelId, ext, 'BargeMe', 's', {
-        BargeChannel: callInfo.agentChannelId,
-        Mode: 'whisper',
-      }, timeout);
-      if (result.status !== 200 && result.status !== 201) {
-        const errMsg = result.body || 'Originate failed';
-        return res.status(502).json({ success: false, error: errMsg });
-      }
+    // ChanSpy options (old PBX style): bq=listen only, qw=whisper, Bq=barge (all hear each other)
+    const spyParam = mode === 'listen' ? 'bq' : mode === 'whisper' ? 'qw' : 'Bq';
+    let bargeChannelName = callInfo.agentChannelId;
+    try {
+      const agentChan = await getChannel(callInfo.agentChannelId);
+      if (agentChan?.name) bargeChannelName = agentChan.name;
+    } catch (_) {}
+    const result = await originateToContext(channelId, ext, 'BargeMe', 's', {
+      BargeChannel: bargeChannelName,
+      SpyParameter: spyParam,
+    }, timeout);
+    if (result.status !== 200 && result.status !== 201) {
+      const errMsg = result.body || 'Originate failed';
+      return res.status(502).json({ success: false, error: errMsg });
     }
     return res.json({ success: true, message: `Ringing supervisor for ${mode}` });
   } catch (err) {

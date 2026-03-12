@@ -76,6 +76,36 @@ router.post('/ivr-menus', validate(createIvrMenuSchema), async (req, res) => {
   }
 });
 
+router.patch('/ivr-menus/:id', async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (!id || isNaN(id)) return res.status(400).json({ success: false, error: 'Invalid IVR ID' });
+    const existing = await queryOne('SELECT id, tenant_id FROM ivr_menus WHERE id = ?', [id]);
+    if (!existing) return res.status(404).json({ success: false, error: 'IVR menu not found' });
+    const { name, config, options } = req.body || {};
+    const ivrName = String(name ?? '').trim();
+    if (!ivrName) return res.status(400).json({ success: false, error: 'IVR name required' });
+    const configJson = config != null ? JSON.stringify(config) : null;
+    await query('UPDATE ivr_menus SET name = ?, config_json = ? WHERE id = ?', [ivrName, configJson, id]);
+    await query('DELETE FROM ivr_menu_options WHERE ivr_menu_id = ?', [id]);
+    if (Array.isArray(options)) {
+      for (const opt of options) {
+        const key = String(opt.dtmf_key || '').trim();
+        if (!key) continue;
+        await query(
+          'INSERT INTO ivr_menu_options (ivr_menu_id, dtmf_key, destination_type, destination_id) VALUES (?, ?, ?, ?)',
+          [id, key, opt.destination_type || 'hangup', opt.destination_id ?? null]
+        );
+      }
+    }
+    syncDialplanToAsterisk().catch((e) => console.error('Dialplan sync:', e.message));
+    return res.json({ success: true });
+  } catch (err) {
+    console.error('Superadmin update ivr-menu error:', err);
+    return res.status(500).json({ success: false, error: 'Failed to update IVR menu' });
+  }
+});
+
 router.delete('/ivr-menus/:id', async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);

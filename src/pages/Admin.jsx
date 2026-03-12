@@ -275,7 +275,7 @@ export default function Admin() {
                         <th>Number</th>
                         <th>Tenant ID</th>
                         <th>Added</th>
-                        <th>Action</th>
+                        <th style={{ minWidth: '5.5rem', whiteSpace: 'nowrap' }}>Action</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -287,15 +287,16 @@ export default function Admin() {
                           <td>{e.number}</td>
                           <td>{e.tenant_id}</td>
                           <td>{e.created_at || '—'}</td>
-                          <td>
+                          <td style={{ minWidth: '5.5rem' }}>
                             <button
                               type="button"
                               className="action-btn"
                               style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem' }}
                               disabled={blacklistDeleteLoading === e.id}
                               onClick={() => handleBlacklistDelete(e.id)}
+                              title="Remove this number from blacklist"
                             >
-                              {blacklistDeleteLoading === e.id ? '…' : 'Remove'}
+                              {blacklistDeleteLoading === e.id ? '…' : 'Delete'}
                             </button>
                           </td>
                         </tr>

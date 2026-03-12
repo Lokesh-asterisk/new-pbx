@@ -7,7 +7,7 @@
 import express from 'express';
 import { query, queryOne } from '../db.js';
 import { getQueueWaitingCounts, getBridgedCallInfo } from '../ari-stasis-queue.js';
-import { originateIntoStasis, originateToContext, getQueueStasisAppName, isAriConfigured } from '../asterisk-ari.js';
+import { originateToContext, isAriConfigured, getChannel } from '../asterisk-ari.js';
 import { subscribeWallboard } from '../realtime.js';
 import { performForceEndBreak, performForceLogout } from '../utils/agent-actions.js';
 import { resolveRequestTenantId, ensureAgentInTenant, isSuperadminRole, isAdminRole } from '../utils/tenant.js';
@@ -529,22 +529,19 @@ router.post('/monitor', validate(wallboardMonitorSchema), async (req, res) => {
     }
 
     const channelId = `Supervisor-${ext}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    const app = getQueueStasisAppName();
     const timeout = 45;
-
-    if (mode === 'barge' || mode === 'listen') {
-      const result = await originateIntoStasis(channelId, `PJSIP/${ext}`, app, [callInfo.bridgeId, mode], timeout);
-      if (result.status !== 200 && result.status !== 201) {
-        return res.status(502).json({ success: false, error: result.body || 'Originate failed' });
-      }
-    } else {
-      const result = await originateToContext(channelId, ext, 'BargeMe', 's', {
-        BargeChannel: callInfo.agentChannelId,
-        Mode: 'whisper',
-      }, timeout);
-      if (result.status !== 200 && result.status !== 201) {
-        return res.status(502).json({ success: false, error: result.body || 'Originate failed' });
-      }
+    const spyParam = mode === 'listen' ? 'bq' : mode === 'whisper' ? 'qw' : 'Bq';
+    let bargeChannelName = callInfo.agentChannelId;
+    try {
+      const agentChan = await getChannel(callInfo.agentChannelId);
+      if (agentChan?.name) bargeChannelName = agentChan.name;
+    } catch (_) {}
+    const result = await originateToContext(channelId, ext, 'BargeMe', 's', {
+      BargeChannel: bargeChannelName,
+      SpyParameter: spyParam,
+    }, timeout);
+    if (result.status !== 200 && result.status !== 201) {
+      return res.status(502).json({ success: false, error: result.body || 'Originate failed' });
     }
 
     return res.json({ success: true, message: `Ringing supervisor for ${mode}` });

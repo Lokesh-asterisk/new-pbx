@@ -12,6 +12,8 @@ router.get('/cdr', async (req, res) => {
     const effectiveTenantId = getEffectiveTenantId(req);
     const from = (req.query.from || '').toString().trim();
     const to = (req.query.to || '').toString().trim();
+    const caller = (req.query.caller || '').toString().trim();
+    const didTfn = (req.query.did_tfn || req.query.didTfn || '').toString().trim();
     const agent = (req.query.agent || '').toString().trim();
     const queue = (req.query.queue || '').toString().trim();
     const direction = (req.query.direction || '').toString().trim();
@@ -31,6 +33,14 @@ router.get('/cdr', async (req, res) => {
     if (to) {
       where.push('cr.start_time <= ?');
       params.push(to.includes(' ') ? to : `${to} 23:59:59`);
+    }
+    if (caller) {
+      where.push('cr.source_number = ?');
+      params.push(caller);
+    }
+    if (didTfn) {
+      where.push('cr.did_tfn = ?');
+      params.push(didTfn);
     }
     if (agent) {
       where.push('(cr.agent_extension = ? OR cr.agent_id = ? OR u.username LIKE ? OR u.phone_login_name LIKE ?)');

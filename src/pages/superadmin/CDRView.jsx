@@ -2,8 +2,8 @@ import { memo, useEffect, useRef } from 'react';
 
 const CDRView = memo(function CDRView({
   list, total, page, totalPages, loading, tableMissing, error,
-  from, to, agent, queue, direction, status,
-  onFromChange, onToChange, onAgentChange, onQueueChange, onDirectionChange, onStatusChange,
+  from, to, caller, didTfn, agent, queue, direction, status,
+  onFromChange, onToChange, onCallerChange, onDidTfnChange, onAgentChange, onQueueChange, onDirectionChange, onStatusChange,
   onPageChange, onRefresh, onDownload,
   playingRecordingId, recordingAudioUrl, onPlayRecording, onStopRecording,
 }) {
@@ -48,6 +48,14 @@ const CDRView = memo(function CDRView({
         <label className="cdr-filter-label">
           To
           <input type="date" className="cdr-input" value={to} onChange={(e) => onToChange(e.target.value)} />
+        </label>
+        <label className="cdr-filter-label">
+          Caller
+          <input type="text" className="cdr-input" placeholder="Caller number" value={caller} onChange={(e) => onCallerChange(e.target.value)} />
+        </label>
+        <label className="cdr-filter-label">
+          DID/TFN
+          <input type="text" className="cdr-input" placeholder="DID or TFN" value={didTfn} onChange={(e) => onDidTfnChange(e.target.value)} />
         </label>
         <label className="cdr-filter-label">
           Agent
