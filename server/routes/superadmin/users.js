@@ -100,6 +100,17 @@ router.post('/users', validate(createUserSchema), async (req, res) => {
         });
       }
     }
+    // Username must be unique per tenant (parent_id)
+    const existingUser = await queryOne(
+      'SELECT id FROM users WHERE (parent_id <=> ?) AND username = ? LIMIT 1',
+      [parentId, String(username).trim()]
+    );
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        error: 'Username already exists for this tenant. Choose a different username.',
+      });
+    }
     const hash = await bcrypt.hash(password, 10);
     const emailVal = email && String(email).trim() ? String(email).trim() : `${username}@localhost`;
     await query(
@@ -132,7 +143,7 @@ router.post('/users', validate(createUserSchema), async (req, res) => {
     return res.json({ success: true, user });
   } catch (err) {
     if (err.code === 'ER_DUP_ENTRY') {
-      return res.status(400).json({ success: false, error: 'Username already exists' });
+      return res.status(400).json({ success: false, error: 'Username already exists for this tenant. Choose a different username.' });
     }
     console.error('Superadmin create user error:', err);
     return res.status(500).json({ success: false, error: 'Failed to create user' });

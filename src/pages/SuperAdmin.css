@@ -1,5 +1,5 @@
 .superadmin-error {
-  color: #f87171;
+  color: var(--color-error);
   margin: 0 0 1rem;
   font-size: 0.875rem;
 }

@@ -9,6 +9,7 @@ import AsteriskLogsView from './superadmin/AsteriskLogsView';
 import RolePermissionsView from './superadmin/RolePermissionsView';
 import CDRView from './superadmin/CDRView';
 import LiveAgentsView from './superadmin/LiveAgentsView';
+import ServerHealthView from './superadmin/ServerHealthView';
 import './Dashboard.css';
 import './SuperAdmin.css';
 
@@ -17,6 +18,7 @@ const ROLES = ['superadmin', 'admin', 'user', 'agent'];
 const ROLE_LABEL = { 2: 'Admin', 3: 'User', 5: 'Agent' };
 const MANAGEABLE_ROLES = [2, 3, 5];
 
+// Permissionable items must have the same moduleKey in server/modules.js so they appear in Role Permissions.
 const ALL_NAV_GROUPS = [
   {
     group: 'User Management',
@@ -45,6 +47,7 @@ const ALL_NAV_GROUPS = [
     group: 'Reports & Monitoring',
     items: [
       { id: 'overview', label: 'Dashboard', moduleKey: 'dashboard' },
+      { id: 'server-health', label: 'Server Health', moduleKey: 'dashboard' },
       { id: 'cdr', label: 'CDR & Recordings', moduleKey: 'cdr' },
       { id: 'did-tfn-report', label: 'Calls per DID/TFN', moduleKey: 'cdr' },
       { id: 'live-agents', label: 'Agent Live Monitoring', moduleKey: 'wallboard' },
@@ -229,10 +232,25 @@ export default function SuperAdmin() {
   const [cdrLoading, setCdrLoading] = useState(false);
   const [cdrFrom, setCdrFrom] = useState('');
   const [cdrTo, setCdrTo] = useState('');
+  const [cdrCaller, setCdrCaller] = useState('');
+  const [cdrDidTfn, setCdrDidTfn] = useState('');
   const [cdrAgent, setCdrAgent] = useState('');
   const [cdrQueue, setCdrQueue] = useState('');
   const [cdrDirection, setCdrDirection] = useState('');
   const [cdrStatus, setCdrStatus] = useState('');
+  const cdrFiltersRef = useRef({ from: '', to: '', caller: '', didTfn: '', agent: '', queue: '', direction: '', status: '' });
+  useEffect(() => {
+    cdrFiltersRef.current = {
+      from: cdrFrom,
+      to: cdrTo,
+      caller: cdrCaller,
+      didTfn: cdrDidTfn,
+      agent: cdrAgent,
+      queue: cdrQueue,
+      direction: cdrDirection,
+      status: cdrStatus,
+    };
+  }, [cdrFrom, cdrTo, cdrCaller, cdrDidTfn, cdrAgent, cdrQueue, cdrDirection, cdrStatus]);
   const [playingRecordingId, setPlayingRecordingId] = useState(null);
   const [recordingAudioUrl, setRecordingAudioUrl] = useState(null);
   const [cdrTableMissing, setCdrTableMissing] = useState(false);
@@ -263,6 +281,9 @@ export default function SuperAdmin() {
   const [blockedCallsTo, setBlockedCallsTo] = useState(() => new Date().toISOString().slice(0, 10));
   const [blockedCallsTenantId, setBlockedCallsTenantId] = useState('');
   const [blockedCallsRecent, setBlockedCallsRecent] = useState(false);
+  const [blockedCallsDeleteLoading, setBlockedCallsDeleteLoading] = useState(null);
+  const [blockedCallsSelectedIds, setBlockedCallsSelectedIds] = useState(new Set());
+  const [blockedCallsBulkDeleteLoading, setBlockedCallsBulkDeleteLoading] = useState(false);
 
   const loadTenants = useCallback(async () => {
     try {
@@ -347,14 +368,17 @@ export default function SuperAdmin() {
     setCdrError('');
     const pageToUse = overridePage != null ? overridePage : cdrPage;
     if (overridePage != null) setCdrPage(overridePage);
+    const f = cdrFiltersRef.current;
     try {
       const q = new URLSearchParams();
-      if (cdrFrom) q.set('from', cdrFrom);
-      if (cdrTo) q.set('to', cdrTo);
-      if (cdrAgent) q.set('agent', cdrAgent);
-      if (cdrQueue) q.set('queue', cdrQueue);
-      if (cdrDirection) q.set('direction', cdrDirection);
-      if (cdrStatus) q.set('status', cdrStatus);
+      if (f.from) q.set('from', f.from);
+      if (f.to) q.set('to', f.to);
+      if (f.caller) q.set('caller', f.caller);
+      if (f.didTfn) q.set('did_tfn', f.didTfn);
+      if (f.agent) q.set('agent', f.agent);
+      if (f.queue) q.set('queue', f.queue);
+      if (f.direction) q.set('direction', f.direction);
+      if (f.status) q.set('status', f.status);
       q.set('page', String(pageToUse));
       q.set('limit', '25');
       const res = await apiFetch(`/api/superadmin/cdr?${q.toString()}`);
@@ -380,18 +404,21 @@ export default function SuperAdmin() {
     } finally {
       setCdrLoading(false);
     }
-  }, [cdrPage, cdrFrom, cdrTo, cdrAgent, cdrQueue, cdrDirection, cdrStatus]);
+  }, [cdrPage]);
 
   const downloadCDR = useCallback(async () => {
+    const f = cdrFiltersRef.current;
     try {
       const q = new URLSearchParams();
       q.set('format', 'csv');
-      if (cdrFrom) q.set('from', cdrFrom);
-      if (cdrTo) q.set('to', cdrTo);
-      if (cdrAgent) q.set('agent', cdrAgent);
-      if (cdrQueue) q.set('queue', cdrQueue);
-      if (cdrDirection) q.set('direction', cdrDirection);
-      if (cdrStatus) q.set('status', cdrStatus);
+      if (f.from) q.set('from', f.from);
+      if (f.to) q.set('to', f.to);
+      if (f.caller) q.set('caller', f.caller);
+      if (f.didTfn) q.set('did_tfn', f.didTfn);
+      if (f.agent) q.set('agent', f.agent);
+      if (f.queue) q.set('queue', f.queue);
+      if (f.direction) q.set('direction', f.direction);
+      if (f.status) q.set('status', f.status);
       const res = await apiFetch(`/api/superadmin/cdr?${q.toString()}`);
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -411,7 +438,7 @@ export default function SuperAdmin() {
     } catch (e) {
       alert(e?.message || 'Download failed');
     }
-  }, [cdrFrom, cdrTo, cdrAgent, cdrQueue, cdrDirection, cdrStatus]);
+  }, []);
 
   const loadDidTfnReport = useCallback(async () => {
     setDidTfnLoading(true);
@@ -624,6 +651,7 @@ export default function SuperAdmin() {
       if (res.ok && data.success) {
         setBlockedCallsList(data.list || []);
         setBlockedCallsTotal(data.total ?? (data.list || []).length);
+        setBlockedCallsSelectedIds(new Set());
       }
     } catch (_) {}
     finally { setBlockedCallsLoading(false); }
@@ -847,6 +875,13 @@ export default function SuperAdmin() {
     if (view === 'did-tfn-report') loadDidTfnReport();
   }, [view, loadCDR, loadDidTfnReport]);
 
+  // Auto-search CDR when any filter changes (debounced) – no need to click Search
+  useEffect(() => {
+    if (view !== 'cdr') return;
+    const t = setTimeout(() => loadCDR(1), 400);
+    return () => clearTimeout(t);
+  }, [cdrFrom, cdrTo, cdrCaller, cdrDidTfn, cdrAgent, cdrQueue, cdrDirection, cdrStatus, loadCDR]);
+
   const playRecording = useCallback(async (uniqueId) => {
     if (playingRecordingId === uniqueId) {
       setPlayingRecordingId(null);
@@ -945,8 +980,15 @@ export default function SuperAdmin() {
   }, [editingQueue]);
 
   useEffect(() => {
-    if (view === 'ivr') { loadIvrMenus(); loadSoundFiles(); }
-  }, [view, loadIvrMenus, loadSoundFiles]);
+    if (view === 'ivr') {
+      loadIvrMenus();
+      loadSoundFiles();
+      loadExtensions();
+      loadQueues();
+      loadTimeConditions();
+      loadVoicemailBoxes();
+    }
+  }, [view, loadIvrMenus, loadSoundFiles, loadExtensions, loadQueues, loadTimeConditions, loadVoicemailBoxes]);
 
   useEffect(() => {
     if (view === 'timeconditions') { loadTimeGroups(); loadTimeConditions(); loadQueues(); loadExtensions(); }
@@ -989,6 +1031,55 @@ export default function SuperAdmin() {
       else setBlacklistError(data.error || 'Failed to delete');
     } catch (e) { setBlacklistError(e?.message || 'Failed to delete'); }
     finally { setBlacklistDeleteLoading(null); }
+  };
+
+  const handleBlockedCallDelete = async (id) => {
+    setBlockedCallsDeleteLoading(id);
+    setBlacklistError('');
+    try {
+      const res = await apiFetch(`/api/admin/blacklist/blocked-calls/${id}`, { method: 'DELETE' });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success) {
+        setBlockedCallsSelectedIds((prev) => { const s = new Set(prev); s.delete(id); return s; });
+        loadBlockedCalls();
+      } else setBlacklistError(data.error || 'Failed to delete blocked call record');
+    } catch (e) { setBlacklistError(e?.message || 'Failed to delete'); }
+    finally { setBlockedCallsDeleteLoading(null); }
+  };
+
+  const toggleBlockedCallSelection = (id) => {
+    setBlockedCallsSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleBlockedCallsSelectAll = () => {
+    if (blockedCallsSelectedIds.size >= blockedCallsList.length) {
+      setBlockedCallsSelectedIds(new Set());
+    } else {
+      setBlockedCallsSelectedIds(new Set(blockedCallsList.map((b) => b.id)));
+    }
+  };
+
+  const handleBlockedCallsBulkDelete = async () => {
+    const ids = Array.from(blockedCallsSelectedIds);
+    if (ids.length === 0) return;
+    setBlockedCallsBulkDeleteLoading(true);
+    setBlacklistError('');
+    try {
+      const res = await apiFetch('/api/admin/blacklist/blocked-calls/bulk-delete', {
+        method: 'POST',
+        body: JSON.stringify({ ids }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success) {
+        setBlockedCallsSelectedIds(new Set());
+        loadBlockedCalls();
+      } else setBlacklistError(data.error || 'Failed to delete selected');
+    } catch (e) { setBlacklistError(e?.message || 'Failed to delete'); }
+    finally { setBlockedCallsBulkDeleteLoading(false); }
   };
 
   const openAddUser = (role) => {
@@ -2172,8 +2263,13 @@ export default function SuperAdmin() {
                   <p className="superadmin-sync-message" role="status">{syncAsteriskMessage}</p>
                 )}
               </section>
+              <ServerHealthView />
             </>
           )}
+
+        {view === 'server-health' && (
+          <ServerHealthView />
+        )}
 
         {view === 'tenants' && (
           <section className="dashboard-section">
@@ -4019,7 +4115,7 @@ export default function SuperAdmin() {
               ) : (
                 <div className="superadmin-table-wrap">
                   <table className="superadmin-table">
-                    <thead><tr><th>Number / Pattern</th><th>Match</th><th>Tenant</th><th>Added</th><th></th></tr></thead>
+                    <thead><tr><th>Number / Pattern</th><th>Match</th><th>Tenant</th><th>Added</th><th style={{ minWidth: '5.5rem', whiteSpace: 'nowrap' }}>Action</th></tr></thead>
                     <tbody>
                       {blacklistList.length === 0 && <tr><td colSpan={5}>No entries. Add a number or pattern above.</td></tr>}
                       {blacklistList.map((e) => (
@@ -4028,9 +4124,9 @@ export default function SuperAdmin() {
                           <td>{e.match_type || 'exact'}</td>
                           <td>{getTenantLabel(e.tenant_id)}</td>
                           <td>{e.created_at || '—'}</td>
-                          <td>
-                            <button type="button" className="action-btn superadmin-delete-btn" disabled={blacklistDeleteLoading === e.id} onClick={() => handleBlacklistDelete(e.id)}>
-                              {blacklistDeleteLoading === e.id ? '…' : 'Remove'}
+                          <td style={{ minWidth: '5.5rem' }}>
+                            <button type="button" className="action-btn superadmin-delete-btn" disabled={blacklistDeleteLoading === e.id} onClick={() => handleBlacklistDelete(e.id)} title="Remove this entry from blacklist">
+                              {blacklistDeleteLoading === e.id ? '…' : 'Delete'}
                             </button>
                           </td>
                         </tr>
@@ -4063,21 +4159,67 @@ export default function SuperAdmin() {
                 <button type="button" className="action-btn" onClick={loadBlockedCalls} disabled={blockedCallsLoading}>
                   {blockedCallsLoading ? 'Loading…' : 'Refresh'}
                 </button>
+                {blockedCallsList.length > 0 && (
+                  <>
+                    <button
+                      type="button"
+                      className="action-btn superadmin-delete-btn"
+                      disabled={blockedCallsBulkDeleteLoading || blockedCallsSelectedIds.size === 0}
+                      onClick={handleBlockedCallsBulkDelete}
+                      title={blockedCallsSelectedIds.size === 0 ? 'Select rows below to delete' : `Delete ${blockedCallsSelectedIds.size} selected record(s)`}
+                    >
+                      {blockedCallsBulkDeleteLoading ? 'Deleting…' : `Delete selected (${blockedCallsSelectedIds.size})`}
+                    </button>
+                    {blockedCallsSelectedIds.size > 0 && (
+                      <button type="button" className="action-btn" style={{ fontSize: '0.8125rem' }} onClick={() => setBlockedCallsSelectedIds(new Set())}>
+                        Clear selection
+                      </button>
+                    )}
+                  </>
+                )}
               </div>
               {blockedCallsLoading ? (
                 <p className="superadmin-loading">Loading blocked calls…</p>
               ) : (
                 <div className="superadmin-table-wrap">
                   <table className="superadmin-table">
-                    <thead><tr><th>Blocked at</th><th>Caller number</th><th>DID</th><th>Tenant</th></tr></thead>
+                    <thead>
+                      <tr>
+                        <th style={{ width: '2.5rem', textAlign: 'center' }}>
+                          {blockedCallsList.length > 0 && (
+                            <input
+                              type="checkbox"
+                              checked={blockedCallsList.length > 0 && blockedCallsSelectedIds.size >= blockedCallsList.length}
+                              ref={(el) => { if (el) el.indeterminate = blockedCallsSelectedIds.size > 0 && blockedCallsSelectedIds.size < blockedCallsList.length; }}
+                              onChange={toggleBlockedCallsSelectAll}
+                              title="Select all on this page"
+                            />
+                          )}
+                        </th>
+                        <th>Blocked at</th><th>Caller number</th><th>DID</th><th>Tenant</th><th style={{ minWidth: '5.5rem', whiteSpace: 'nowrap' }}>Action</th>
+                      </tr>
+                    </thead>
                     <tbody>
-                      {blockedCallsList.length === 0 && <tr><td colSpan={4}>No blocked calls in this range. Run migration 023 to enable logging.</td></tr>}
+                      {blockedCallsList.length === 0 && <tr><td colSpan={6}>No blocked calls in this range. Run migration 023 to enable logging.</td></tr>}
                       {blockedCallsList.map((b) => (
                         <tr key={b.id}>
+                          <td style={{ textAlign: 'center' }}>
+                            <input
+                              type="checkbox"
+                              checked={blockedCallsSelectedIds.has(b.id)}
+                              onChange={() => toggleBlockedCallSelection(b.id)}
+                              title="Select for bulk delete"
+                            />
+                          </td>
                           <td>{b.blocked_at || '—'}</td>
                           <td>{b.caller_number || '—'}</td>
                           <td>{b.did || '—'}</td>
                           <td>{getTenantLabel(b.tenant_id)}</td>
+                          <td style={{ minWidth: '5.5rem' }}>
+                            <button type="button" className="action-btn superadmin-delete-btn" disabled={blockedCallsDeleteLoading === b.id} onClick={() => handleBlockedCallDelete(b.id)} title="Delete this blocked-call record">
+                              {blockedCallsDeleteLoading === b.id ? '…' : 'Delete'}
+                            </button>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -4158,12 +4300,16 @@ export default function SuperAdmin() {
               tableMissing={cdrTableMissing}
               from={cdrFrom}
               to={cdrTo}
+              caller={cdrCaller}
+              didTfn={cdrDidTfn}
               agent={cdrAgent}
               queue={cdrQueue}
               direction={cdrDirection}
               status={cdrStatus}
               onFromChange={setCdrFrom}
               onToChange={setCdrTo}
+              onCallerChange={setCdrCaller}
+              onDidTfnChange={setCdrDidTfn}
               onAgentChange={setCdrAgent}
               onQueueChange={setCdrQueue}
               onDirectionChange={setCdrDirection}

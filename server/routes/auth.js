@@ -2,6 +2,7 @@ import express from 'express';
 import bcrypt from 'bcrypt';
 import {
   findUserByUsername,
+  findUsersByUsername,
   updateLastLogin,
   updatePassword,
   getEnabledModules,
@@ -39,15 +40,21 @@ router.post('/login', validate(loginSchema), async (req, res) => {
   try {
     const { username, password } = req.body;
     const trimmedUsername = String(username).trim();
-    const user = await findUserByUsername(trimmedUsername);
-    if (!user) {
+    const candidates = await findUsersByUsername(trimmedUsername);
+    if (!candidates || candidates.length === 0) {
       return res.status(401).json({ success: false, error: 'Invalid credentials or account disabled' });
     }
-    if (user.account_status !== 1) {
-      return res.status(401).json({ success: false, error: 'Account is disabled. Enable it in Super Admin → Users (set status to Active).' });
+    // With per-tenant usernames, multiple users can share a username; try password against each enabled account
+    let user = null;
+    for (const u of candidates) {
+      if (u.account_status !== 1) continue;
+      const ok = await bcrypt.compare(password, u.password_hash);
+      if (ok) {
+        user = u;
+        break;
+      }
     }
-    const ok = await bcrypt.compare(password, user.password_hash);
-    if (!ok) {
+    if (!user) {
       return res.status(401).json({ success: false, error: 'Invalid credentials or account disabled' });
     }
     await clearPreviousAgentStatusOnLogin(req);

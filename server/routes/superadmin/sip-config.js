@@ -313,7 +313,13 @@ router.delete('/sip-trunks/:id', async (req, res) => {
 router.post('/sync-asterisk', async (req, res) => {
   try {
     const result = await syncAllToAsterisk();
-    return res.json({ success: result.success, skipped: result.skipped, message: result.message, errors: result.errors });
+    return res.json({
+      success: result.success,
+      skipped: result.skipped,
+      message: result.message,
+      errors: result.errors,
+      bargeMeSnippet: result.bargeMeSnippet,
+    });
   } catch (err) {
     console.error('Superadmin sync-asterisk error:', err);
     return res.status(500).json({ success: false, message: err.message || 'Sync failed' });

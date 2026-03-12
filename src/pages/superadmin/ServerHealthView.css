@@ -1,0 +1,179 @@
+.server-health-section {
+  margin-top: 1.5rem;
+}
+
+.server-health-alerts {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.server-health-alert {
+  padding: 0.5rem 0.75rem;
+  background: rgba(234, 179, 8, 0.15);
+  border: 1px solid rgba(234, 179, 8, 0.5);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 0.875rem;
+}
+
+.server-health-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.server-health-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: 10px;
+  padding: 1rem 1.25rem;
+}
+
+.server-health-card h3 {
+  margin: 0 0 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.server-health-metric {
+  margin-bottom: 0.75rem;
+}
+
+.server-health-metric:last-child {
+  margin-bottom: 0;
+}
+
+.server-health-metric-label {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-bottom: 0.25rem;
+}
+
+.server-health-value {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.server-health-metric-sub {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  display: block;
+  margin-top: 0.15rem;
+}
+
+.server-health-progress-wrap {
+  margin-top: 0.2rem;
+}
+
+.server-health-progress-bar {
+  height: 8px;
+  background: var(--border-default);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.server-health-progress-fill {
+  height: 100%;
+  background: var(--color-primary, #3b82f6);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.server-health-progress-fill.alert {
+  background: #eab308;
+}
+
+.server-health-progress-label {
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  display: block;
+  margin-top: 0.25rem;
+}
+
+.server-health-load {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  font-size: 0.875rem;
+  color: var(--text-primary);
+}
+
+.server-health-load-cores {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+.server-health-stats-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.server-health-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.server-health-stat-value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.server-health-stat-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.server-health-services {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.server-health-service {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.server-health-service-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.server-health-service.running .server-health-service-dot {
+  background: #22c55e;
+}
+
+.server-health-service.down .server-health-service-dot {
+  background: #ef4444;
+}
+
+.server-health-service.n/a .server-health-service-dot {
+  background: var(--text-muted);
+}
+
+.server-health-muted {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin: 0.5rem 0 0;
+}
+
+.server-health-footer {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin: 0.5rem 0 0;
+}

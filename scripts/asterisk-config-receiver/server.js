@@ -188,6 +188,7 @@ const server = http.createServer(async (req, res) => {
     } else if (urlPath === '/config/pjsip-trunks') {
       await writeAndReload(PJSIP_TRUNKS, content, "asterisk -rx 'module reload res_pjsip.so'");
     } else if (urlPath === '/config/dialplan') {
+      console.log(`Writing dialplan to ${DIALPLAN_CONF} (${content.length} bytes)`);
       await writeAndReload(DIALPLAN_CONF, content, "asterisk -rx 'dialplan reload'");
     } else {
       await writeAndReload(PJSIP_CUSTOM, content, "asterisk -rx 'module reload res_pjsip.so'");
@@ -203,5 +204,6 @@ const server = http.createServer(async (req, res) => {
 server.listen(PORT, '0.0.0.0', async () => {
   await ensurePjsipFilesExist();
   console.log(`Asterisk config receiver listening on port ${PORT}`);
+  console.log(`Config paths: agents=${AGENTS_CONF} pjsip=${PJSIP_CUSTOM} trunks=${PJSIP_TRUNKS} dialplan=${DIALPLAN_CONF}`);
   if (CONFIG_API_KEY) console.log('API key required (X-Config-API-Key)');
 });

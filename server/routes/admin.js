@@ -7,7 +7,7 @@ import express from 'express';
 import fs from 'fs';
 import path from 'path';
 import { query, queryOne } from '../db.js';
-import { originateIntoStasis, originateToContext, getQueueStasisAppName, isAriConfigured } from '../asterisk-ari.js';
+import { originateToContext, isAriConfigured, getChannel } from '../asterisk-ari.js';
 import { getBridgedCallInfo, forceLogoutAgent } from '../ari-stasis-queue.js';
 import { destroySessionsForUser } from '../session-utils.js';
 import { endAgentSession } from '../agent-sessions.js';
@@ -17,6 +17,7 @@ import { performForceEndBreak, performForceLogout } from '../utils/agent-actions
 import { ensureAgentInTenant } from '../utils/tenant.js';
 import { sanitizeAgentId } from '../utils/validation.js';
 import { validate, blacklistSchema, monitorSchema } from '../utils/schemas.js';
+import { collectServerHealthMetrics } from '../server-health-metrics.js';
 
 const router = express.Router();
 
@@ -176,6 +177,78 @@ router.delete('/blacklist/:id', async (req, res) => {
   }
 });
 
+// DELETE /blacklist/blocked-calls/:id — delete one blocked-call log entry
+router.delete('/blacklist/blocked-calls/:id', async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (!Number.isFinite(id) || id < 1) {
+      return res.status(400).json({ success: false, error: 'Invalid id' });
+    }
+    const user = req.session?.user;
+    const isSuperadmin = user?.role === 'superadmin' || user?.role === 1;
+    const existing = await queryOne('SELECT id, tenant_id FROM blacklist_blocked_calls WHERE id = ?', [id]);
+    if (!existing) {
+      return res.status(404).json({ success: false, error: 'Not found' });
+    }
+    if (!isSuperadmin && (user?.parent_id != null || user?.tenant_id != null)) {
+      const adminTenant = user.parent_id ?? user.tenant_id;
+      if (existing.tenant_id !== adminTenant) {
+        return res.status(403).json({ success: false, error: 'Can only delete blocked-call records for your tenant' });
+      }
+    }
+    await query('DELETE FROM blacklist_blocked_calls WHERE id = ?', [id]);
+    return res.json({ success: true });
+  } catch (err) {
+    if (err?.code === 'ER_NO_SUCH_TABLE') {
+      return res.status(404).json({ success: false, error: 'Blocked calls table not found' });
+    }
+    console.error('Admin blacklist blocked-calls delete error:', err);
+    return res.status(500).json({ success: false, error: 'Failed to delete' });
+  }
+});
+
+// POST /blacklist/blocked-calls/bulk-delete — delete many blocked-call log entries at once
+router.post('/blacklist/blocked-calls/bulk-delete', async (req, res) => {
+  try {
+    const ids = req.body?.ids;
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ success: false, error: 'ids array required (non-empty)' });
+    }
+    const parsed = ids.map((x) => parseInt(x, 10)).filter((n) => Number.isFinite(n) && n >= 1);
+    if (parsed.length === 0) {
+      return res.status(400).json({ success: false, error: 'No valid ids' });
+    }
+    if (parsed.length > 5000) {
+      return res.status(400).json({ success: false, error: 'Maximum 5000 ids per request' });
+    }
+    const user = req.session?.user;
+    const isSuperadmin = user?.role === 'superadmin' || user?.role === 1;
+    const adminTenant = !isSuperadmin && (user?.parent_id != null || user?.tenant_id != null) ? (user.parent_id ?? user.tenant_id) : null;
+
+    const placeholders = parsed.map(() => '?').join(',');
+    const rows = await query(
+      `SELECT id, tenant_id FROM blacklist_blocked_calls WHERE id IN (${placeholders})`,
+      parsed
+    );
+    const allowedIds = adminTenant == null
+      ? rows.map((r) => r.id)
+      : rows.filter((r) => r.tenant_id === adminTenant).map((r) => r.id);
+
+    if (allowedIds.length === 0) {
+      return res.json({ success: true, deleted: 0, message: 'No records to delete (or none allowed)' });
+    }
+    const delPlaceholders = allowedIds.map(() => '?').join(',');
+    await query(`DELETE FROM blacklist_blocked_calls WHERE id IN (${delPlaceholders})`, allowedIds);
+    return res.json({ success: true, deleted: allowedIds.length });
+  } catch (err) {
+    if (err?.code === 'ER_NO_SUCH_TABLE') {
+      return res.status(404).json({ success: false, error: 'Blocked calls table not found' });
+    }
+    console.error('Admin blacklist blocked-calls bulk-delete error:', err);
+    return res.status(500).json({ success: false, error: 'Failed to delete' });
+  }
+});
+
 // GET /blacklist/blocked-calls — report of calls blocked by blacklist (historical + recent for live view)
 router.get('/blacklist/blocked-calls', async (req, res) => {
   try {
@@ -249,6 +322,18 @@ router.get('/blacklist/blocked-calls', async (req, res) => {
   } catch (err) {
     console.error('Admin blacklist blocked-calls error:', err);
     return res.status(500).json({ success: false, error: err.message || 'Failed to load blocked calls' });
+  }
+});
+
+// --- Server health (dashboard monitoring) ---
+
+router.get('/server-health', async (req, res) => {
+  try {
+    const metrics = await collectServerHealthMetrics();
+    return res.json({ success: true, metrics });
+  } catch (err) {
+    console.error('Admin server-health error:', err);
+    return res.status(500).json({ success: false, error: err?.message || 'Failed to collect server health' });
   }
 });
 
@@ -525,23 +610,20 @@ router.post('/live-agents/:agentId/monitor', validate(monitorSchema), async (req
       return res.status(400).json({ success: false, error: 'Agent not on a bridged call' });
     }
     const channelId = `Supervisor-${ext}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    const app = getQueueStasisAppName();
     const timeout = 45;
-    if (mode === 'barge' || mode === 'listen') {
-      const result = await originateIntoStasis(channelId, `PJSIP/${ext}`, app, [callInfo.bridgeId, mode], timeout);
-      if (result.status !== 200 && result.status !== 201) {
-        const errMsg = result.body || 'Originate failed';
-        return res.status(502).json({ success: false, error: errMsg });
-      }
-    } else {
-      const result = await originateToContext(channelId, ext, 'BargeMe', 's', {
-        BargeChannel: callInfo.agentChannelId,
-        Mode: 'whisper',
-      }, timeout);
-      if (result.status !== 200 && result.status !== 201) {
-        const errMsg = result.body || 'Originate failed';
-        return res.status(502).json({ success: false, error: errMsg });
-      }
+    const spyParam = mode === 'listen' ? 'bq' : mode === 'whisper' ? 'qw' : 'Bq';
+    let bargeChannelName = callInfo.agentChannelId;
+    try {
+      const agentChan = await getChannel(callInfo.agentChannelId);
+      if (agentChan?.name) bargeChannelName = agentChan.name;
+    } catch (_) {}
+    const result = await originateToContext(channelId, ext, 'BargeMe', 's', {
+      BargeChannel: bargeChannelName,
+      SpyParameter: spyParam,
+    }, timeout);
+    if (result.status !== 200 && result.status !== 201) {
+      const errMsg = result.body || 'Originate failed';
+      return res.status(502).json({ success: false, error: errMsg });
     }
     return res.json({ success: true, message: `Ringing supervisor for ${mode}` });
   } catch (err) {

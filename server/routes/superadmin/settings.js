@@ -8,9 +8,9 @@ import { getEffectiveTenantId, requireSuperadmin, ROLE_IDS } from './middleware.
 
 const router = express.Router();
 
-// --- Role Modules (dynamic module access control) ---
+// --- Role Modules (dynamic module access control); SuperAdmin only ---
 
-router.get('/role-modules', async (req, res) => {
+router.get('/role-modules', requireSuperadmin, async (req, res) => {
   try {
     const rows = await query('SELECT role, module_key, enabled FROM role_modules');
     const roleModules = {};
@@ -28,7 +28,7 @@ router.get('/role-modules', async (req, res) => {
   }
 });
 
-router.put('/role-modules', validate(roleModuleSchema), async (req, res) => {
+router.put('/role-modules', requireSuperadmin, validate(roleModuleSchema), async (req, res) => {
   try {
     const { role, module_key, enabled } = req.body || {};
     if (![2, 3, 5].includes(Number(role))) {

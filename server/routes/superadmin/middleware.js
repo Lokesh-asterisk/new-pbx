@@ -8,6 +8,7 @@ export const PATH_MODULE_MAP = {
   'sip-extensions': 'extensions',
   'debug-ari-endpoints': 'extensions',
   'sip-trunks': 'trunks',
+  'campaigns': 'campaigns',
   'stats': 'dashboard',
   'inbound-routes': 'inbound',
   'outbound-routes': 'outbound',
@@ -17,7 +18,7 @@ export const PATH_MODULE_MAP = {
   'time-groups': 'timeconditions',
   'sound-files': 'sounds',
   'voicemail-boxes': 'voicemail',
-  'live-agents': 'wallboard',
+  'live-agents': ['wallboard', 'live_agents'],
   'cdr': 'cdr',
   'asterisk-logs': '_system',
 };
@@ -34,9 +35,10 @@ export function requireModuleAccess(req, res, next) {
   if (!user) return res.status(401).json({ success: false, error: 'Not authenticated' });
   if (user.role === 'superadmin') return next();
   const firstSegment = req.path.split('/').filter(Boolean)[0] || '';
-  const requiredModule = PATH_MODULE_MAP[firstSegment];
-  if (!requiredModule) return res.status(403).json({ success: false, error: 'Superadmin only' });
-  if (Array.isArray(user.modules) && user.modules.includes(requiredModule)) return next();
+  const required = PATH_MODULE_MAP[firstSegment];
+  if (!required) return res.status(403).json({ success: false, error: 'Superadmin only' });
+  const allowed = Array.isArray(required) ? required : [required];
+  if (Array.isArray(user.modules) && allowed.some(m => user.modules.includes(m))) return next();
   return res.status(403).json({ success: false, error: 'Module not enabled for your role' });
 }
 

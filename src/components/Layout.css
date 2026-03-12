@@ -12,6 +12,7 @@
   padding: 0.75rem 1.5rem;
   background: var(--bg-surface);
   border-bottom: 1px solid var(--border-default);
+  box-shadow: var(--shadow-header);
   flex-shrink: 0;
 }
 
@@ -92,24 +93,32 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 2.25rem;
-  height: 2.25rem;
+  width: 2.5rem;
+  height: 2.5rem;
   padding: 0;
-  font-size: 1.125rem;
   background: var(--bg-elevated);
   border: 1px solid var(--border-subtle);
-  border-radius: 8px;
+  border-radius: 10px;
   cursor: pointer;
+  color: var(--text-secondary);
   line-height: 1;
 }
 
 .btn-theme-toggle:hover {
-  background: var(--border-subtle);
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  border-color: var(--border-default);
 }
 
 .btn-theme-toggle:focus-visible {
-  outline: 2px solid #3b82f6;
-  outline-offset: 2px;
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.btn-theme-toggle-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* Mobile responsive layout */
@@ -130,6 +139,6 @@
 
 /* Focus styles for keyboard navigation */
 .btn-logout:focus-visible {
-  outline: 2px solid #3b82f6;
-  outline-offset: 2px;
+  outline: none;
+  box-shadow: var(--focus-ring);
 }
